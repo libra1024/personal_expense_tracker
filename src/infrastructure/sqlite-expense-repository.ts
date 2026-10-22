@@ -16,7 +16,7 @@ export function createRepository(db: Database, options: { demoData?: boolean; no
   return {
     async initialize() {
       const version = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
-      if ((version?.user_version ?? 0) > 2) throw new Error('This database was created by a newer app. Update the app to open it.');
+      if ((version?.user_version ?? 0) > 3) throw new Error('This database was created by a newer app. Update the app to open it.');
       await db.execAsync('PRAGMA journal_mode = WAL;');
       if ((version?.user_version ?? 0) === 0) await db.execAsync(`
         BEGIN TRANSACTION;
@@ -29,11 +29,12 @@ export function createRepository(db: Database, options: { demoData?: boolean; no
           originalAmountMinor INTEGER,
           originalCurrency TEXT,
           rateSnapshot TEXT,
-          createdAt TEXT NOT NULL
+          createdAt TEXT NOT NULL,
+          updatedAt TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS expenses_date ON expenses(date DESC);
         CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-        PRAGMA user_version = 2;
+        PRAGMA user_version = 3;
         COMMIT;
       `).catch(async (error: unknown) => {
         try { await db.execAsync('ROLLBACK;'); } catch { /* Preserve the initialization error. */ }
@@ -45,6 +46,16 @@ export function createRepository(db: Database, options: { demoData?: boolean; no
         ALTER TABLE expenses ADD COLUMN originalCurrency TEXT;
         ALTER TABLE expenses ADD COLUMN rateSnapshot TEXT;
         PRAGMA user_version = 2;
+        COMMIT;
+      `).catch(async (error: unknown) => {
+        try { await db.execAsync('ROLLBACK;'); } catch { /* Preserve the initialization error. */ }
+        throw error;
+      });
+      if ((version?.user_version ?? 0) > 0 && (version?.user_version ?? 0) <= 2) await db.execAsync(`
+        BEGIN TRANSACTION;
+        ALTER TABLE expenses ADD COLUMN updatedAt TEXT;
+        UPDATE expenses SET updatedAt = createdAt WHERE updatedAt IS NULL;
+        PRAGMA user_version = 3;
         COMMIT;
       `).catch(async (error: unknown) => {
         try { await db.execAsync('ROLLBACK;'); } catch { /* Preserve the initialization error. */ }
@@ -63,12 +74,13 @@ export function createRepository(db: Database, options: { demoData?: boolean; no
     },
     async save(input: ExpenseInput, id?: number): Promise<number> {
       const item = validateInput(input);
+      const timestamp = (options.now?.() ?? new Date()).toISOString();
       if (id !== undefined) {
-        const result = await db.runAsync('UPDATE expenses SET amountMinor = ?, category = ?, date = ?, note = ?, originalAmountMinor = ?, originalCurrency = ?, rateSnapshot = ? WHERE id = ?', item.amountMinor, item.category, item.date, item.note, item.originalAmountMinor ?? null, item.originalCurrency ?? null, item.rateSnapshot ?? null, id);
+        const result = await db.runAsync('UPDATE expenses SET amountMinor = ?, category = ?, date = ?, note = ?, originalAmountMinor = ?, originalCurrency = ?, rateSnapshot = ?, updatedAt = ? WHERE id = ?', item.amountMinor, item.category, item.date, item.note, item.originalAmountMinor ?? null, item.originalCurrency ?? null, item.rateSnapshot ?? null, timestamp, id);
         if (!result.changes) throw new Error('This expense no longer exists.');
         return id;
       }
-      const result = await db.runAsync('INSERT INTO expenses (amountMinor, category, date, note, originalAmountMinor, originalCurrency, rateSnapshot, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', item.amountMinor, item.category, item.date, item.note, item.originalAmountMinor ?? null, item.originalCurrency ?? null, item.rateSnapshot ?? null, new Date().toISOString());
+      const result = await db.runAsync('INSERT INTO expenses (amountMinor, category, date, note, originalAmountMinor, originalCurrency, rateSnapshot, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', item.amountMinor, item.category, item.date, item.note, item.originalAmountMinor ?? null, item.originalCurrency ?? null, item.rateSnapshot ?? null, timestamp, timestamp);
       return result.lastInsertRowId;
     },
     async remove(id: number) { await db.runAsync('DELETE FROM expenses WHERE id = ?', id); },
@@ -119,7 +131,7 @@ async function seedDemoData(db: Database, today: Date, explicit = false): Promis
       if (explicit && count?.count !== 0) throw new Error('Your expense list must be empty before loading sample expenses.');
       if (count?.count === 0) {
         for (const input of createDemoExpenses(today)) {
-          await db.runAsync('INSERT INTO expenses (amountMinor, category, date, note, createdAt) VALUES (?, ?, ?, ?, ?)', input.amountMinor, input.category, input.date, input.note, today.toISOString());
+          await db.runAsync('INSERT INTO expenses (amountMinor, category, date, note, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)', input.amountMinor, input.category, input.date, input.note, today.toISOString(), today.toISOString());
         }
       }
       // Record the decision even for a populated database, so deleting user data cannot trigger samples later.

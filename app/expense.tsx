@@ -4,7 +4,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Alert, BackHandler, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toBaseMinor } from '../src/domain/currency';
-import { CATEGORIES, CURRENCIES, dateLabel, localDate, parseAmount, validateDraft, type Category, type Currency } from '../src/domain/expenses';
+import { CATEGORIES, CURRENCIES, dateLabel, localDate, parseAmount, timestampLabel, validateDraft, type Category, type Currency } from '../src/domain/expenses';
 import { useExpenses } from '../src/presentation/expense-provider';
 import { exitExpense } from '../src/navigation';
 import { Button, categoryMeta, colors, Icon, IconButton, styles } from '../src/presentation/ui';
@@ -81,6 +81,7 @@ export default function ExpenseForm() {
             {showPicker && <View><DateTimePicker mode="date" value={new Date(year, month - 1, day, 12)} minimumDate={new Date(1900, 0, 1)} maximumDate={new Date(9999, 11, 31)} display={Platform.OS === 'ios' ? 'spinner' : 'default'} themeVariant="light" onChange={(event, selected) => { if (Platform.OS !== 'ios') setShowPicker(false); if (event.type !== 'dismissed' && selected) setDate(localDate(selected)); }} />{Platform.OS === 'ios' && <Button secondary onPress={() => setShowPicker(false)}>Done</Button>}</View>}
           </View>
           <View><Text style={styles.fieldLabel}>Note <Text style={{ color: colors.muted, fontWeight: '400' }}>(optional)</Text></Text><TextInput accessibilityLabel="Expense note, optional" editable={!busy} multiline maxLength={500} value={note} onChangeText={setNote} placeholder="What was it for?" placeholderTextColor={colors.muted} style={[styles.input, { minHeight: 90, textAlignVertical: 'top' }]} /></View>
+          {editing && original ? <View style={[styles.card, { padding: 15, gap: 5 }]}><Text style={styles.small}>Created · {timestampLabel(original.createdAt)}</Text><Text style={styles.small}>Last modified · {timestampLabel(original.updatedAt)}</Text></View> : null}
           {error ? <Text accessibilityRole="alert" accessibilityLiveRegion="assertive" style={styles.error}>{error}</Text> : null}
           <Button icon="checkmark" onPress={() => { void save(); }} disabled={busy}>{busy ? 'Saving…' : editing ? 'Save changes' : 'Save expense'}</Button>
           {editing && <Button danger icon="trash-outline" onPress={remove} disabled={busy}>Delete expense</Button>}
