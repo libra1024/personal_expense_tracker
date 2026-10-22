@@ -1,13 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { ExpenseStore } from '../src/store.ts';
+import { createFrankfurterRateProvider } from '../src/infrastructure/frankfurter-rate-provider.ts';
 import { createMockRepository } from './mocks/repository.ts';
 import { sampleExpenses } from './fixtures/expenses.ts';
 
 test('startup refresh converts existing stored expenses without delaying offline CRUD', async () => {
   const disk = storage({ expenses: sampleExpenses });
   let release!: (response: Response) => void;
-  const store = new ExpenseStore(disk.repo, { request: async () => new Promise(resolve => { release = resolve; }) });
+  const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(async () => new Promise(resolve => { release = resolve; })));
   await store.initialize();
   assert.equal(store.getSnapshot().ready, true);
   assert.equal(store.getSnapshot().baseCurrency, 'MXN');
@@ -24,7 +25,7 @@ test('startup refresh converts existing stored expenses without delaying offline
 
 test('refresh exposes frozen legacy snapshots without requiring an app restart', async () => {
   const disk = storage({ expenses: sampleExpenses, freezeLegacyOnRateCache: true });
-  const store = new ExpenseStore(disk.repo, { request: async () => new Response(JSON.stringify(rateRows)) });
+  const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(async () => new Response(JSON.stringify(rateRows))));
   await store.initialize();
   await store.refreshRates();
   const frozen = store.getSnapshot().expenses;
@@ -34,7 +35,7 @@ test('refresh exposes frozen legacy snapshots without requiring an app restart',
 
 test('automatic refresh is throttled on currency changes and foreground, manual refresh bypasses it', async () => {
   const disk = storage(); let now = 0; let calls = 0;
-  const store = new ExpenseStore(disk.repo, { now: () => now, request: async () => { calls++; return new Response(JSON.stringify(rateRows)); } });
+  const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(async () => { calls++; return new Response(JSON.stringify(rateRows)); }), { now: () => now });
   await store.initialize(); await store.refreshRates();
   assert.equal(calls, 1);
   await store.setCurrency('USD'); await store.refreshRates();
@@ -47,7 +48,7 @@ test('automatic refresh is throttled on currency changes and foreground, manual 
 
 test('cache read failure never prevents startup or offline expense changes', async () => {
   const disk = storage(); disk.failNext('getRateCache');
-  const store = new ExpenseStore(disk.repo, { request: offline });
+  const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(offline));
   await store.initialize(); await store.refreshRates();
   assert.equal(store.getSnapshot().ready, true);
   assert.equal(store.getSnapshot().rates, null);
@@ -62,7 +63,7 @@ const input = { amountMinor: 4500, category: 'Food & Drink', date: '2026-10-21',
 const storage = createMockRepository;
 
 test('successful mutations refresh visible history and retain currency selection', async () => {
-  const disk = storage(); const store = new ExpenseStore(disk.repo, { request: offline });
+  const disk = storage(); const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(offline));
   await store.initialize();
   assert.equal(store.getSnapshot().ready, true);
   await store.save(input);
@@ -78,7 +79,7 @@ test('successful mutations refresh visible history and retain currency selection
 });
 
 test('failed saves preserve history and allow retry with the same draft', async () => {
-  const disk = storage(); const store = new ExpenseStore(disk.repo, { request: offline }); await store.initialize();
+  const disk = storage(); const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(offline)); await store.initialize();
   disk.fail(true);
   await assert.rejects(store.save(input), /Disk full/);
   assert.equal(store.getSnapshot().busy, false);
@@ -89,7 +90,7 @@ test('failed saves preserve history and allow retry with the same draft', async 
 });
 
 test('in-flight submissions cannot create duplicate expenses', async () => {
-  const disk = storage(); const store = new ExpenseStore(disk.repo, { request: offline }); await store.initialize();
+  const disk = storage(); const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(offline)); await store.initialize();
   const release = disk.pauseNext('save');
   const first = store.save(input);
   assert.equal(store.getSnapshot().busy, true);
@@ -100,7 +101,7 @@ test('in-flight submissions cannot create duplicate expenses', async () => {
 });
 
 test('failed deletion and currency changes leave visible data unchanged', async () => {
-  const disk = storage(); const store = new ExpenseStore(disk.repo, { request: offline }); await store.initialize(); await store.save(input);
+  const disk = storage(); const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(offline)); await store.initialize(); await store.save(input);
   disk.fail(true);
   await assert.rejects(store.remove(store.getSnapshot().expenses[0].id));
   await assert.rejects(store.setCurrency('EUR'));
@@ -109,7 +110,7 @@ test('failed deletion and currency changes leave visible data unchanged', async 
 });
 
 test('initialization errors can be retried without clearing storage', async () => {
-  const disk = storage(); disk.fail(true); const store = new ExpenseStore(disk.repo, { request: offline });
+  const disk = storage(); disk.fail(true); const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(offline));
   await store.initialize();
   assert.equal(store.getSnapshot().ready, false);
   assert.match(store.getSnapshot().error ?? '', /Disk unavailable/);
@@ -120,19 +121,19 @@ test('initialization errors can be retried without clearing storage', async () =
 
 test('loads seeded expenses and currency without exposing mutable storage records', async () => {
   const disk = storage({ expenses: sampleExpenses, currency: 'EUR' });
-  const store = new ExpenseStore(disk.repo, { request: offline }); await store.initialize();
+  const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(offline)); await store.initialize();
   assert.equal(store.getSnapshot().currency, 'EUR');
   assert.equal(store.getSnapshot().expenses.length, 3);
   assert.equal(store.getSnapshot().expenses[0].note, 'Weekly groceries');
   store.getSnapshot().expenses[0].note = 'Changed outside storage';
-  const reopened = new ExpenseStore(disk.repo, { request: offline }); await reopened.initialize();
+  const reopened = new ExpenseStore(disk.repo, createFrankfurterRateProvider(offline)); await reopened.initialize();
   assert.equal(reopened.getSnapshot().expenses[0].note, 'Weekly groceries');
 });
 
 test('a one-time history read failure is recoverable and retains seeded expenses', async () => {
   const disk = storage({ expenses: sampleExpenses });
   disk.failNext('list', new Error('Storage is temporarily locked'));
-  const store = new ExpenseStore(disk.repo, { request: offline }); await store.initialize();
+  const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(offline)); await store.initialize();
   assert.equal(store.getSnapshot().ready, false);
   assert.match(store.getSnapshot().error ?? '', /temporarily locked/);
   await store.initialize();
@@ -143,7 +144,7 @@ test('a one-time history read failure is recoverable and retains seeded expenses
 test('a failed currency read does not mark partially loaded data as ready', async () => {
   const disk = storage({ expenses: sampleExpenses, currency: 'USD' });
   disk.failNext('getCurrency', new Error('Cannot read settings'));
-  const store = new ExpenseStore(disk.repo, { request: offline }); await store.initialize();
+  const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(offline)); await store.initialize();
   assert.equal(store.getSnapshot().ready, false);
   assert.deepEqual(store.getSnapshot().expenses, []);
   await store.initialize();
@@ -153,7 +154,7 @@ test('a failed currency read does not mark partially loaded data as ready', asyn
 
 test('adding after deletion preserves remaining expenses with distinct identities', async () => {
   const disk = storage({ expenses: sampleExpenses });
-  const store = new ExpenseStore(disk.repo, { request: offline }); await store.initialize();
+  const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(offline)); await store.initialize();
   await store.remove(2);
   await store.save(input);
   assert.deepEqual(store.getSnapshot().expenses.map(e => e.id).sort((a, b) => a - b), [1, 3, 4]);
@@ -161,7 +162,7 @@ test('adding after deletion preserves remaining expenses with distinct identitie
 });
 
 test('a delayed save keeps history unchanged until storage confirms success', async () => {
-  const disk = storage(); const store = new ExpenseStore(disk.repo, { request: offline }); await store.initialize();
+  const disk = storage(); const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(offline)); await store.initialize();
   const resume = disk.pauseNext('save');
   const saving = store.save(input);
   assert.deepEqual(store.getSnapshot().expenses, []);
@@ -172,7 +173,7 @@ test('a delayed save keeps history unchanged until storage confirms success', as
 });
 
 test('loading sample expenses updates visible data immediately', async () => {
-  const disk = storage(); const store = new ExpenseStore(disk.repo, { request: offline }); await store.initialize();
+  const disk = storage(); const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(offline)); await store.initialize();
   assert.equal(await store.loadDemoData(), true);
   assert.equal(store.getSnapshot().expenses.length, 5);
   assert.equal(store.getSnapshot().expenses.reduce((sum, entry) => sum + entry.amountMinor, 0), 44450);
@@ -181,7 +182,7 @@ test('loading sample expenses updates visible data immediately', async () => {
 });
 
 test('failed explicit sample loading leaves the list empty and can be retried', async () => {
-  const disk = storage(); const store = new ExpenseStore(disk.repo, { request: offline }); await store.initialize();
+  const disk = storage(); const store = new ExpenseStore(disk.repo, createFrankfurterRateProvider(offline)); await store.initialize();
   disk.failNext('loadDemoData', new Error('Disk full'));
   await assert.rejects(store.loadDemoData(), /Disk full/);
   assert.deepEqual(store.getSnapshot().expenses, []);

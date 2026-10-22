@@ -15,5 +15,6 @@ test('domain rules stay independent from UI, Expo, SQLite, and network adapters'
 
 test('application state depends on contracts instead of Expo UI APIs', () => {
   const source = read('src/application/expense-store.ts');
-  assert.doesNotMatch(source, /infrastructure\/|expo-|react-native|react['"]/);
+  assert.doesNotMatch(source, /infrastructure\/|expo-|react-native|react['"]|typeof fetch|\bfetch\s*\(/);
+  assert.match(source, /ExchangeRateProvider/);
 });

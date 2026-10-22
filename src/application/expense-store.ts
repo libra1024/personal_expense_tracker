@@ -1,22 +1,25 @@
 import type { Currency, Expense, ExpenseInput } from '../domain/expenses.ts';
 import { validateInput } from '../domain/expenses.ts';
-import { fetchRates, type Rate } from '../domain/currency.ts';
+import { type Rate } from '../domain/currency.ts';
+import type { ExchangeRateProvider } from './exchange-rate-provider.ts';
 import type { ExpenseRepository } from './expense-repository.ts';
 
 type Snapshot = { baseCurrency: Currency; rates: Rate[] | null; refreshingRates: boolean; rateWarning: string | null; expenses: Expense[]; currency: Currency; ready: boolean; loading: boolean; busy: boolean; error: string | null };
 
+/** Coordinates offline expense use cases and optional rate-cache refreshes through application ports. */
 export class ExpenseStore {
   private repository: ExpenseRepository;
+  private rateProvider: ExchangeRateProvider;
   private listeners = new Set<() => void>();
   private state: Snapshot = { baseCurrency: 'MXN', rates: null, refreshingRates: false, rateWarning: null, expenses: [], currency: 'MXN', ready: false, loading: false, busy: false, error: null };
 
   private now: () => number;
   private lastAttempt = -Infinity;
-  private request: typeof fetch;
   private refresh: Promise<void> | undefined;
-  constructor(repository: ExpenseRepository, options: { request?: typeof fetch; now?: () => number } = {}) {
+  /** Creates a store with local persistence and a replaceable exchange-rate provider. */
+  constructor(repository: ExpenseRepository, rateProvider: ExchangeRateProvider, options: { now?: () => number } = {}) {
     this.repository = repository;
-    this.request = options.request ?? fetch;
+    this.rateProvider = rateProvider;
     this.now = options.now ?? Date.now;
   }
   getSnapshot = (): Snapshot => this.state;
@@ -43,6 +46,7 @@ export class ExpenseStore {
       this.patch({ error: error instanceof Error ? error.message : 'Unable to open your expenses.' });
     } finally { this.patch({ loading: false }); }
   }
+  /** Refreshes cached rates without preventing the local store from remaining usable offline. */
   refreshRates(force = false): Promise<void> {
     if (this.refresh) return this.refresh;
     if (!this.state.ready || (!force && this.now() - this.lastAttempt < 300000)) return Promise.resolve();
@@ -50,7 +54,7 @@ export class ExpenseStore {
     this.patch({ refreshingRates: true });
     this.refresh = (async () => {
       try {
-        const rates = await fetchRates(this.state.baseCurrency, this.request);
+        const rates = await this.rateProvider.fetchRates(this.state.baseCurrency);
         await this.repository.setRateCache(rates);
         const expenses = await this.repository.list();
         this.patch({ rates, expenses, rateWarning: null });
