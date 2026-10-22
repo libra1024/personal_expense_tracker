@@ -84,8 +84,20 @@ export function createRepository(db: Database, options: { demoData?: boolean; no
       try { return validateRates(JSON.parse(setting.value), base); } catch { return null; }
     },
     async setRateCache(rates: Rate[]) {
-      const validated = validateRates(rates, await this.getBaseCurrency());
-      await db.runAsync("INSERT INTO settings (key, value) VALUES ('exchangeRates', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", JSON.stringify(validated));
+      const base = await this.getBaseCurrency();
+      const validated = validateRates(rates, base);
+      const snapshot = JSON.stringify(validated);
+      await db.execAsync('BEGIN IMMEDIATE;');
+      try {
+        await db.runAsync("INSERT INTO settings (key, value) VALUES ('exchangeRates', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", snapshot);
+        // Older records predate snapshots. Treat them as amounts in the fixed base
+        // currency and freeze the first validated cache available after upgrade.
+        await db.runAsync('UPDATE expenses SET originalAmountMinor = COALESCE(originalAmountMinor, amountMinor), originalCurrency = COALESCE(originalCurrency, ?), rateSnapshot = ? WHERE rateSnapshot IS NULL', base, snapshot);
+        await db.execAsync('COMMIT;');
+      } catch (error) {
+        try { await db.execAsync('ROLLBACK;'); } catch { /* Preserve the write error. */ }
+        throw error;
+      }
     },
     async getCurrency(): Promise<Currency> {
       const setting = await db.getFirstAsync<{ value: string }>("SELECT value FROM settings WHERE key = 'currency'");

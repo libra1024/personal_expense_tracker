@@ -18,8 +18,18 @@ test('startup refresh converts existing stored expenses without delaying offline
   await store.refreshRates();
   assert.deepEqual(store.getSnapshot().rates, rateRows);
   await store.setCurrency('USD');
-  assert.deepEqual(store.getSnapshot().expenses, original);
+  assert.deepEqual(store.getSnapshot().expenses.map(expense => expense.id).sort((a, b) => a - b), original.map(expense => expense.id).sort((a, b) => a - b));
   assert.deepEqual(await disk.repo.getRateCache(), rateRows);
+});
+
+test('refresh exposes frozen legacy snapshots without requiring an app restart', async () => {
+  const disk = storage({ expenses: sampleExpenses, freezeLegacyOnRateCache: true });
+  const store = new ExpenseStore(disk.repo, { request: async () => new Response(JSON.stringify(rateRows)) });
+  await store.initialize();
+  await store.refreshRates();
+  const frozen = store.getSnapshot().expenses;
+  assert.ok(frozen.every(expense => expense.originalCurrency === 'MXN'));
+  assert.ok(frozen.every(expense => expense.rateSnapshot === JSON.stringify(rateRows)));
 });
 
 test('automatic refresh is throttled on currency changes and foreground, manual refresh bypasses it', async () => {

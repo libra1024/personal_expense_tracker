@@ -52,6 +52,24 @@ test('validated exchange cache persists across reopening and rejects corrupt or 
 
 const input = { amountMinor: 1234, category: 'Groceries', date: '2026-10-21', note: "bread's fresh" } as const;
 
+test('freezes legacy base-currency expenses when the first rate cache is saved', async () => {
+  const db = new DatabaseSync(':memory:');
+  const firstRates = [{ date: '2026-10-21', base: 'MXN' as const, quote: 'USD' as const, rate: 1 / 18 }, { date: '2026-10-21', base: 'MXN' as const, quote: 'EUR' as const, rate: 0.05 }];
+  const laterRates = [{ date: '2026-10-22', base: 'MXN' as const, quote: 'USD' as const, rate: 1 / 20 }, { date: '2026-10-22', base: 'MXN' as const, quote: 'EUR' as const, rate: 0.04 }];
+  try {
+    const repo = createRepository(adapter(db)); await repo.initialize();
+    const id = await repo.save(input);
+    await repo.setRateCache(firstRates);
+    let saved = (await repo.list()).find(entry => entry.id === id)!;
+    assert.equal(saved.originalAmountMinor, input.amountMinor);
+    assert.equal(saved.originalCurrency, 'MXN');
+    assert.equal(saved.rateSnapshot, JSON.stringify(firstRates));
+    await repo.setRateCache(laterRates);
+    saved = (await repo.list()).find(entry => entry.id === id)!;
+    assert.equal(saved.rateSnapshot, JSON.stringify(firstRates));
+  } finally { db.close(); }
+});
+
 test('migrates and persists an immutable original-currency rate snapshot', async () => {
   const db = new DatabaseSync(':memory:');
   try {
