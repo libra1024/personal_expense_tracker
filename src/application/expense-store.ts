@@ -52,7 +52,8 @@ export class ExpenseStore {
       try {
         const rates = await fetchRates(this.state.baseCurrency, this.request);
         await this.repository.setRateCache(rates);
-        this.patch({ rates, rateWarning: null });
+        const expenses = await this.repository.list();
+        this.patch({ rates, expenses, rateWarning: null });
       } catch {
         this.patch({ rateWarning: 'Could not refresh rates. Saved rates may be out of date.' });
       } finally {

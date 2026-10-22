@@ -4,7 +4,7 @@ import type { Rate } from '../../src/currency.ts';
 import { createDemoExpenses } from '../../src/demo-data.ts';
 
 type Operation = keyof Repository;
-type Options = { expenses?: readonly Expense[]; currency?: Currency; now?: () => string };
+type Options = { expenses?: readonly Expense[]; currency?: Currency; now?: () => string; freezeLegacyOnRateCache?: boolean };
 
 /** In-memory storage boundary for store tests. Each factory call has isolated state. */
 export function createMockRepository(options: Options = {}) {
@@ -43,7 +43,16 @@ export function createMockRepository(options: Options = {}) {
     },
     async getBaseCurrency() { await before('getBaseCurrency'); return baseCurrency; },
     async getRateCache() { await before('getRateCache'); return rates?.map(r => ({ ...r })) ?? null; },
-    async setRateCache(value) { await before('setRateCache'); rates = value.map(r => ({ ...r })); },
+    async setRateCache(value) {
+      await before('setRateCache');
+      rates = value.map(r => ({ ...r }));
+      if (options.freezeLegacyOnRateCache) entries = entries.map(expense => expense.rateSnapshot ? expense : {
+        ...expense,
+        originalAmountMinor: expense.originalAmountMinor ?? expense.amountMinor,
+        originalCurrency: expense.originalCurrency ?? baseCurrency,
+        rateSnapshot: JSON.stringify(rates),
+      });
+    },
     async getCurrency() { await before('getCurrency'); return currency; },
     async setCurrency(value) { await before('setCurrency'); currency = value; },
     async save(value, id) {
