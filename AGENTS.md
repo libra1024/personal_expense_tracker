@@ -19,6 +19,12 @@
 - Verify branch ancestry and a clean working tree after merging. Leave the checkout on `development` when the task is complete.
 - If a remote is configured and publishing is requested, use pull requests targeting `development`, not `main`. Do not push or create a remote without user authorization.
 
+## Architecture
+
+- Follow `docs/architecture.md` for every application change.
+- Dependency direction is `presentation → application → domain`; infrastructure implements application contracts. Domain modules must not import React, Expo, SQLite, or network APIs.
+- SQLite remains the offline source of truth. Network services such as Firebase are optional synchronization adapters and must never block local expense CRUD.
+
 ## Code quality
 
 - Use clear, significant names for classes, functions, variables, and parameters. Avoid ambiguous abbreviations and single-letter names except conventional, short-lived loop indexes.
