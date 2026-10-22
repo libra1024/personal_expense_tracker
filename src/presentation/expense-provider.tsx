@@ -1,10 +1,11 @@
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { openDatabaseAsync } from 'expo-sqlite';
-import { createRepository, type Repository } from '../infrastructure/sqlite-expense-repository.ts';
+import { createRepository } from '../infrastructure/sqlite-expense-repository.ts';
+import type { ExpenseRepository } from '../application/expense-repository.ts';
 import { ExpenseStore } from '../application/expense-store.ts';
 
-function nativeRepository(): Repository {
-  let connection: Promise<Repository> | undefined;
+function nativeRepository(): ExpenseRepository {
+  let connection: Promise<ExpenseRepository> | undefined;
   const get = () => connection ??= openDatabaseAsync('pocket-expenses.db')
     .then(db => createRepository(db, { demoData: true }))
     .catch(error => { connection = undefined; throw error; });

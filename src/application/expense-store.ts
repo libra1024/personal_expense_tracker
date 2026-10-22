@@ -1,12 +1,12 @@
 import type { Currency, Expense, ExpenseInput } from '../domain/expenses.ts';
 import { validateInput } from '../domain/expenses.ts';
 import { fetchRates, type Rate } from '../domain/currency.ts';
-import type { Repository } from '../infrastructure/sqlite-expense-repository.ts';
+import type { ExpenseRepository } from './expense-repository.ts';
 
 type Snapshot = { baseCurrency: Currency; rates: Rate[] | null; refreshingRates: boolean; rateWarning: string | null; expenses: Expense[]; currency: Currency; ready: boolean; loading: boolean; busy: boolean; error: string | null };
 
 export class ExpenseStore {
-  private repository: Repository;
+  private repository: ExpenseRepository;
   private listeners = new Set<() => void>();
   private state: Snapshot = { baseCurrency: 'MXN', rates: null, refreshingRates: false, rateWarning: null, expenses: [], currency: 'MXN', ready: false, loading: false, busy: false, error: null };
 
@@ -14,7 +14,7 @@ export class ExpenseStore {
   private lastAttempt = -Infinity;
   private request: typeof fetch;
   private refresh: Promise<void> | undefined;
-  constructor(repository: Repository, options: { request?: typeof fetch; now?: () => number } = {}) {
+  constructor(repository: ExpenseRepository, options: { request?: typeof fetch; now?: () => number } = {}) {
     this.repository = repository;
     this.request = options.request ?? fetch;
     this.now = options.now ?? Date.now;
