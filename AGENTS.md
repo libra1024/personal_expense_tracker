@@ -22,6 +22,7 @@
 ## Code quality
 
 - Use clear, significant names for classes, functions, variables, and parameters. Avoid ambiguous abbreviations and single-letter names except conventional, short-lived loop indexes.
+- Add a concise documentation comment for every class or function that is created or changed. Explain its purpose and important behavior/constraints, not obvious syntax.
 - After every code creation or modification, run `npm run lint`. Keep ESLint clean; use Prettier if it is introduced or configured for the project.
 - Apply formatting only through the configured formatter/linter. Do not hand-format unrelated code.
 
