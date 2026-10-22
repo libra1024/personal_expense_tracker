@@ -38,7 +38,7 @@ export function createMockRepository(options: Options = {}) {
       await before('loadDemoData');
       if (entries.length) throw new Error('Your expense list must be empty before loading sample expenses.');
       const createdAt = now();
-      entries = createDemoExpenses(new Date(createdAt)).map(expense => ({ ...expense, id: nextId++, createdAt }));
+      entries = createDemoExpenses(new Date(createdAt)).map(expense => ({ ...expense, id: nextId++, createdAt, updatedAt: createdAt }));
       return entries.map(expense => ({ ...expense }));
     },
     async getBaseCurrency() { await before('getBaseCurrency'); return baseCurrency; },
@@ -60,7 +60,8 @@ export function createMockRepository(options: Options = {}) {
       const original = entries.find(expense => expense.id === id);
       if (id !== undefined && !original) throw new Error('This expense no longer exists.');
       const key = id ?? nextId++;
-      const expense: Expense = { ...value, note: value.note.trim(), id: key, createdAt: original?.createdAt ?? now() };
+      const timestamp = now();
+      const expense: Expense = { ...value, note: value.note.trim(), id: key, createdAt: original?.createdAt ?? timestamp, updatedAt: timestamp };
       entries = [...entries.filter(item => item.id !== key), expense];
       return key;
     },

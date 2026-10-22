@@ -6,7 +6,7 @@ export type Category = typeof CATEGORIES[number];
 export const CURRENCIES = ['MXN', 'USD', 'EUR'] as const;
 export type Currency = typeof CURRENCIES[number];
 export type ExpenseInput = { amountMinor: number; category: Category; date: string; note: string; originalAmountMinor?: number; originalCurrency?: Currency; rateSnapshot?: string };
-export type Expense = ExpenseInput & { id: number; createdAt: string };
+export type Expense = ExpenseInput & { id: number; createdAt: string; updatedAt: string };
 export type Draft = { amount: string; category: string; date: string; note: string };
 
 export function parseAmount(input: string): number {
@@ -50,6 +50,12 @@ export function monthLabel(month: string): string {
 export function dateLabel(value: string): string {
   const [year, month, day] = value.split('-').map(Number);
   return new Date(year, month - 1, day, 12).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+export function timestampLabel(value: string, locale = 'en-US', timeZone?: string): string {
+  const timestamp = new Date(value);
+  if (Number.isNaN(timestamp.getTime())) return 'Unknown time';
+  return timestamp.toLocaleString(locale, { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit', timeZone });
 }
 
 export function validateInput(input: ExpenseInput): ExpenseInput {

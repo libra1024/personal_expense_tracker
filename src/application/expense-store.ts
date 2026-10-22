@@ -74,10 +74,10 @@ export class ExpenseStore {
       const normalized = validateInput(input);
       const original = this.state.expenses.find(e => e.id === id);
       if (id !== undefined && !original) throw new Error('This expense no longer exists.');
-      const savedId = await this.repository.save(normalized, id);
-      const expense: Expense = { ...normalized, id: savedId, createdAt: original?.createdAt ?? new Date().toISOString() };
-      // Update from the committed write. A separate failed reload must never turn a successful save into a duplicate retry.
-      this.patch({ expenses: [...this.state.expenses.filter(e => e.id !== savedId), expense] });
+      await this.repository.save(normalized, id);
+      const expenses = await this.repository.list();
+      // Update from the committed write so creation and modification timestamps come from SQLite.
+      this.patch({ expenses });
     });
   }
   remove(id: number) {

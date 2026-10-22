@@ -81,7 +81,36 @@ test('migrates and persists an immutable original-currency rate snapshot', async
     assert.equal(saved.originalAmountMinor, 8000);
     assert.equal(saved.originalCurrency, 'USD');
     assert.equal(saved.rateSnapshot, snapshot);
-    assert.equal(db.prepare('PRAGMA user_version').get()?.user_version, 2);
+    assert.equal(db.prepare('PRAGMA user_version').get()?.user_version, 3);
+  } finally { db.close(); }
+});
+
+test('persists creation and last-modified times for an expense', async () => {
+  const db = new DatabaseSync(':memory:');
+  let now = new Date('2026-10-22T10:15:00.000Z');
+  try {
+    const repo = createRepository(adapter(db), { now: () => now }); await repo.initialize();
+    const id = await repo.save(input);
+    now = new Date('2026-10-22T11:45:00.000Z');
+    await repo.save({ ...input, note: 'Edited bread' }, id);
+    const saved = (await repo.list()).find(entry => entry.id === id) as typeof input & { createdAt: string; updatedAt?: string };
+    assert.equal(saved.createdAt, '2026-10-22T10:15:00.000Z');
+    assert.equal(saved.updatedAt, '2026-10-22T11:45:00.000Z');
+  } finally { db.close(); }
+});
+
+test('migrates version-two records with their existing creation time as last modified', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    db.exec(`CREATE TABLE expenses (id INTEGER PRIMARY KEY AUTOINCREMENT, amountMinor INTEGER NOT NULL, category TEXT NOT NULL, date TEXT NOT NULL, note TEXT NOT NULL DEFAULT '', originalAmountMinor INTEGER, originalCurrency TEXT, rateSnapshot TEXT, createdAt TEXT NOT NULL);
+      CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+      INSERT INTO expenses (amountMinor, category, date, note, createdAt) VALUES (1234, 'Groceries', '2026-10-21', 'Bread', '2026-10-21T10:15:00.000Z');
+      PRAGMA user_version = 2;`);
+    const repo = createRepository(adapter(db)); await repo.initialize();
+    const [saved] = await repo.list();
+    assert.equal(saved.createdAt, '2026-10-21T10:15:00.000Z');
+    assert.equal(saved.updatedAt, '2026-10-21T10:15:00.000Z');
+    assert.equal(db.prepare('PRAGMA user_version').get()?.user_version, 3);
   } finally { db.close(); }
 });
 

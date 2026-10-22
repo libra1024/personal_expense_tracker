@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseAmount, formatMoney, monthKey, shiftMonth, localDate, isValidDate,
-  filterExpenses, summarize, groupByDate, validateDraft,
+  filterExpenses, summarize, groupByDate, validateDraft, timestampLabel,
 } from '../src/expenses.ts';
 
 test('decimal amounts become exact integer cents', () => {
@@ -34,10 +34,15 @@ test('calendar dates and month navigation do not use UTC or overflow at month en
   assert.equal(isValidDate('2026-04-31'), false);
 });
 
+test('formats timestamps with the record date and hour', () => {
+  assert.equal(timestampLabel('2026-10-22T11:45:00.000Z', 'en-US', 'UTC'), 'Oct 22, 2026, 11:45 AM');
+  assert.equal(timestampLabel('not-a-date', 'en-US', 'UTC'), 'Unknown time');
+});
+
 const expenses = [
-  { id: 1, amountMinor: 10, category: 'Groceries', date: '2026-02-28', note: '', createdAt: '2026-02-28T00:00:00Z' },
-  { id: 2, amountMinor: 20, category: 'Groceries', date: '2026-03-01', note: '', createdAt: '2026-03-01T00:00:00Z' },
-  { id: 3, amountMinor: 30, category: 'Transport', date: '2026-03-01', note: '', createdAt: '2026-03-01T00:01:00Z' },
+  { id: 1, amountMinor: 10, category: 'Groceries', date: '2026-02-28', note: '', createdAt: '2026-02-28T00:00:00Z', updatedAt: '2026-02-28T00:00:00Z' },
+  { id: 2, amountMinor: 20, category: 'Groceries', date: '2026-03-01', note: '', createdAt: '2026-03-01T00:00:00Z', updatedAt: '2026-03-01T00:00:00Z' },
+  { id: 3, amountMinor: 30, category: 'Transport', date: '2026-03-01', note: '', createdAt: '2026-03-01T00:01:00Z', updatedAt: '2026-03-01T00:01:00Z' },
 ] as const;
 
 test('filters by calendar month and category and orders newest first', () => {
