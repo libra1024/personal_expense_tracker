@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { openDatabaseAsync } from 'expo-sqlite';
-import { createRepository, type Repository } from './repository.ts';
-import { ExpenseStore } from './store.ts';
+import { createRepository, type Repository } from './infrastructure/sqlite-expense-repository.ts';
+import { ExpenseStore } from './application/expense-store.ts';
 
 function nativeRepository(): Repository {
   let connection: Promise<Repository> | undefined;

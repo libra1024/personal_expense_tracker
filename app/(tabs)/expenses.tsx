@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { router } from 'expo-router';
 import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CATEGORIES, dateLabel, filterExpenses, groupByDate, monthKey, type Category } from '../../src/expenses';
+import { CATEGORIES, dateLabel, filterExpenses, groupByDate, monthKey, type Category } from '../../src/domain/expenses';
 import { useExpenses } from '../../src/provider';
 import { Button, colors, EmptyState, ExpenseRow, Header, MonthPicker, styles } from '../../src/ui';
 

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
-import { CURRENCIES } from '../../src/expenses';
+import { CURRENCIES } from '../../src/domain/expenses';
 import { useExpenses } from '../../src/provider';
 import { Button, Card, colors, Header, Icon, Screen, styles } from '../../src/ui';
 

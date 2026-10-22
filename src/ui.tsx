@@ -3,8 +3,8 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View, type ColorValue, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ComponentProps, ReactNode } from 'react';
-import { historicalExpenseMinor } from './currency.ts';
-import { dateLabel, formatMoney, monthLabel, shiftMonth, type Category, type Currency, type Expense } from './expenses.ts';
+import { historicalExpenseMinor } from './domain/currency.ts';
+import { dateLabel, formatMoney, monthLabel, shiftMonth, type Category, type Currency, type Expense } from './domain/expenses.ts';
 
 export const colors = { background: '#F5F7F5', white: '#FFFFFF', ink: '#17352F', muted: '#70817B', teal: '#167A63', pale: '#E6F2EC', line: '#E3EAE5', danger: '#B33A3A' };
 type IconName = ComponentProps<typeof Ionicons>['name'];

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { Text, View } from 'react-native';
-import { historicalExpenseMinor } from '../../src/currency';
-import { filterExpenses, formatMoney, monthKey, summarize } from '../../src/expenses';
+import { historicalExpenseMinor } from '../../src/domain/currency';
+import { filterExpenses, formatMoney, monthKey, summarize } from '../../src/domain/expenses';
 import { useExpenses } from '../../src/provider';
 import { Button, Card, categoryMeta, colors, EmptyState, ExpenseRow, Header, Icon, MonthPicker, Screen, styles } from '../../src/ui';
 
