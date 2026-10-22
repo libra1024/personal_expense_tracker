@@ -1,4 +1,4 @@
-import { CURRENCIES, isValidDate, type Currency } from './expenses.ts';
+import { CURRENCIES, isValidDate, type Currency, type Expense } from './expenses.ts';
 
 // Interpret the API's decimal rate exactly, including exponent notation. Never
 // multiply cents with binary floating point or convert an already converted value.
@@ -44,6 +44,14 @@ export function toBaseMinor(minor: number, original: Currency, base: Currency, r
 
 export function displayHistoricalMinor(baseMinor: number, base: Currency, target: Currency, snapshot: readonly Rate[] | null): number | null {
   return displayMinor(baseMinor, base, target, snapshot);
+}
+
+export function historicalExpenseMinor(expense: Pick<Expense, 'amountMinor' | 'originalAmountMinor' | 'originalCurrency' | 'rateSnapshot'>, base: Currency, target: Currency): number | null {
+  if (expense.originalCurrency === target && expense.originalAmountMinor != null) return expense.originalAmountMinor;
+  if (target === base) return expense.amountMinor;
+  if (!expense.rateSnapshot) return null;
+  try { return displayMinor(expense.amountMinor, base, target, validateRates(JSON.parse(expense.rateSnapshot), base)); }
+  catch { return null; }
 }
 
 export type Rate = { date: string; base: Currency; quote: Currency; rate: number };

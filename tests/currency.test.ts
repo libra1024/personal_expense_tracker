@@ -64,6 +64,13 @@ test('locks a transaction into its historical base amount and never uses a newer
   assert.equal(currency.toBaseMinor(8000, 'USD', 'MXN', null), null);
 });
 
+test('uses each expense snapshot rather than today’s shared cache', () => {
+  const expense = { amountMinor: 144000, originalAmountMinor: 8000, originalCurrency: 'USD' as const, rateSnapshot: JSON.stringify([{ date: '2026-10-21', base: 'MXN', quote: 'USD', rate: 1 / 18 }, { date: '2026-10-21', base: 'MXN', quote: 'EUR', rate: 0.05 }]) };
+  assert.equal(currency.historicalExpenseMinor(expense, 'MXN', 'USD'), 8000);
+  assert.equal(currency.historicalExpenseMinor(expense, 'MXN', 'EUR'), 7200);
+  assert.equal(currency.historicalExpenseMinor({ amountMinor: 144000 }, 'MXN', 'USD'), null);
+});
+
 export const rows: Rate[] = [
   { date: '2026-10-22', base: 'MXN', quote: 'EUR', rate: 0.04815 },
   { date: '2026-10-21', base: 'MXN', quote: 'USD', rate: 0.05407 },
