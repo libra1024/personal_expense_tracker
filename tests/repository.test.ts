@@ -16,7 +16,56 @@ function adapter(db: DatabaseSync): Database {
   };
 }
 
+test('locks the existing currency as base once without changing expenses', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const repo = createRepository(adapter(db)); await repo.initialize();
+    // Reproduce a v1 installation with an existing preference and no base marker.
+    db.exec("DELETE FROM settings WHERE key = 'baseCurrency'; INSERT OR REPLACE INTO settings VALUES ('currency', 'USD')");
+    await repo.save(input);
+    await repo.initialize();
+    assert.equal(await repo.getBaseCurrency(), 'USD');
+    await repo.setCurrency('EUR'); await repo.initialize();
+    assert.equal(await repo.getBaseCurrency(), 'USD');
+    assert.equal((await repo.list())[0].amountMinor, input.amountMinor);
+  } finally { db.close(); }
+});
+
+test('validated exchange cache persists across reopening and rejects corrupt or mismatched data', async () => {
+  const folder = mkdtempSync(join(tmpdir(), 'pocket-rates-'));
+  const file = join(folder, 'expenses.db'); let db = new DatabaseSync(file);
+  const rates = [{ date: '2026-10-21', base: 'MXN', quote: 'USD', rate: 0.05407 }, { date: '2026-10-22', base: 'MXN', quote: 'EUR', rate: 0.04815 }] as const;
+  try {
+    let repo = createRepository(adapter(db)); await repo.initialize();
+    assert.equal(await repo.getRateCache(), null);
+    await repo.setRateCache([...rates]);
+    db.close(); db = new DatabaseSync(file); repo = createRepository(adapter(db)); await repo.initialize();
+    assert.deepEqual(await repo.getRateCache(), rates);
+    await assert.rejects(repo.setRateCache([]), /rates/i);
+    assert.deepEqual(await repo.getRateCache(), rates);
+    for (const value of ['not json', '[]', JSON.stringify(rates.map(r => ({ ...r, base: 'USD' })))]) {
+      db.prepare("UPDATE settings SET value = ? WHERE key = 'exchangeRates'").run(value);
+      assert.equal(await repo.getRateCache(), null);
+    }
+  } finally { db.close(); rmSync(folder, { recursive: true }); }
+});
+
 const input = { amountMinor: 1234, category: 'Groceries', date: '2026-10-21', note: "bread's fresh" } as const;
+
+test('migrates and persists an immutable original-currency rate snapshot', async () => {
+  const db = new DatabaseSync(':memory:');
+  try {
+    const repo = createRepository(adapter(db)); await repo.initialize();
+    const snapshot = JSON.stringify([{ date: '2026-10-21', base: 'MXN', quote: 'USD', rate: 1 / 18 }, { date: '2026-10-21', base: 'MXN', quote: 'EUR', rate: 0.05 }]);
+    const id = await repo.save({ ...input, amountMinor: 144000, originalAmountMinor: 8000, originalCurrency: 'USD', rateSnapshot: snapshot });
+    const saved = (await repo.list()).find(entry => entry.id === id)!;
+    assert.equal(saved.amountMinor, 144000);
+    assert.equal(saved.originalAmountMinor, 8000);
+    assert.equal(saved.originalCurrency, 'USD');
+    assert.equal(saved.rateSnapshot, snapshot);
+    assert.equal(db.prepare('PRAGMA user_version').get()?.user_version, 2);
+  } finally { db.close(); }
+});
 
 test('migrates idempotently and persists CRUD and settings across reopening', async () => {
   const folder = mkdtempSync(join(tmpdir(), 'pocket-test-'));

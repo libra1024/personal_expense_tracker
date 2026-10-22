@@ -3,7 +3,8 @@ import { router, useLocalSearchParams } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Alert, BackHandler, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { CATEGORIES, dateLabel, localDate, validateDraft, type Category } from '../src/expenses';
+import { toBaseMinor } from '../src/currency';
+import { CATEGORIES, CURRENCIES, dateLabel, localDate, parseAmount, validateDraft, type Category, type Currency } from '../src/expenses';
 import { useExpenses } from '../src/provider';
 import { exitExpense } from '../src/navigation';
 import { Button, categoryMeta, colors, Icon, IconButton, styles } from '../src/ui';
@@ -11,9 +12,13 @@ import { Button, categoryMeta, colors, Icon, IconButton, styles } from '../src/u
 export default function ExpenseForm() {
   const { id: rawId } = useLocalSearchParams<{ id?: string }>();
   const id = rawId === undefined ? undefined : Number(rawId);
-  const { expenses, currency, busy, store } = useExpenses();
+  const { expenses, baseCurrency, rates, busy, store } = useExpenses();
   const original = expenses.find(e => e.id === id);
-  const [amount, setAmount] = useState(() => original ? `${Math.floor(original.amountMinor / 100)}.${String(original.amountMinor % 100).padStart(2, '0')}` : '');
+  const [amount, setAmount] = useState(() => {
+    const minor = original?.originalAmountMinor ?? original?.amountMinor;
+    return minor ? `${Math.floor(minor / 100)}.${String(minor % 100).padStart(2, '0')}` : '';
+  });
+  const [transactionCurrency, setTransactionCurrency] = useState<Currency>(original?.originalCurrency ?? baseCurrency);
   const [category, setCategory] = useState<Category | ''>(original?.category ?? '');
   const [date, setDate] = useState(original?.date ?? localDate());
   const [note, setNote] = useState(original?.note ?? '');
@@ -22,7 +27,8 @@ export default function ExpenseForm() {
   const finishing = useRef(false);
   const editing = id !== undefined;
   const missing = editing && !original;
-  const dirty = amount !== (original ? `${Math.floor(original.amountMinor / 100)}.${String(original.amountMinor % 100).padStart(2, '0')}` : '') || category !== (original?.category ?? '') || date !== (original?.date ?? localDate()) || note !== (original?.note ?? '');
+  const originalAmount = original ? `${Math.floor((original.originalAmountMinor ?? original.amountMinor) / 100)}.${String((original.originalAmountMinor ?? original.amountMinor) % 100).padStart(2, '0')}` : '';
+  const dirty = amount !== originalAmount || transactionCurrency !== (original?.originalCurrency ?? baseCurrency) || category !== (original?.category ?? '') || date !== (original?.date ?? localDate()) || note !== (original?.note ?? '');
 
   function close() {
     if (busy) return;
@@ -38,7 +44,11 @@ export default function ExpenseForm() {
     if (busy || finishing.current) return;
     setError('');
     try {
-      const input = validateDraft({ amount, category, date, note });
+      const draft = validateDraft({ amount, category, date, note });
+      const originalAmountMinor = parseAmount(amount);
+      const amountMinor = toBaseMinor(originalAmountMinor, transactionCurrency, baseCurrency, rates);
+      if (amountMinor === null) throw new Error(`Saved ${baseCurrency} rates are required before recording a ${transactionCurrency} expense.`);
+      const input = { ...draft, amountMinor, originalAmountMinor, originalCurrency: transactionCurrency, rateSnapshot: rates ? JSON.stringify(rates) : undefined };
       if (await store.save(input, id)) { finishing.current = true; exitExpense(router); }
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not save this expense. Please try again.'); }
   }
@@ -60,9 +70,10 @@ export default function ExpenseForm() {
         <View style={styles.between}><View><Text style={styles.eyebrow}>KEEP THE LITTLE THINGS IN VIEW</Text><Text accessibilityRole="header" style={[styles.title, { fontSize: 28 }]}>{editing ? 'Edit expense' : 'Add expense'}</Text></View><IconButton name="close" label="Close expense form" onPress={close} disabled={busy} /></View>
         {missing ? <><Text accessibilityRole="alert" style={styles.error}>This expense no longer exists.</Text><Button onPress={() => exitExpense(router)}>Back to expenses</Button></> : <>
           <View style={[styles.card, { paddingVertical: 26, gap: 8 }]}>
-            <Text style={styles.fieldLabel}>How much did you spend? · {currency}</Text>
-            <TextInput accessibilityLabel={`Amount in ${currency}`} editable={!busy} autoFocus={!editing} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#B2C0B8" maxLength={20} style={{ color: colors.ink, fontSize: 44, fontWeight: '600', paddingVertical: 8 }} />
+            <Text style={styles.fieldLabel}>How much did you spend? · {transactionCurrency}</Text>
+            <TextInput accessibilityLabel={`Amount in ${transactionCurrency}`} editable={!busy} autoFocus={!editing} value={amount} onChangeText={setAmount} keyboardType="decimal-pad" placeholder="0.00" placeholderTextColor="#B2C0B8" maxLength={20} style={{ color: colors.ink, fontSize: 44, fontWeight: '600', paddingVertical: 8 }} />
           </View>
+          <View><Text style={styles.fieldLabel}>Transaction currency</Text><View style={{ flexDirection: 'row', gap: 9 }}>{CURRENCIES.map(value => <Pressable key={value} disabled={busy} accessibilityRole="radio" accessibilityState={{ checked: value === transactionCurrency, disabled: busy }} onPress={() => setTransactionCurrency(value)} style={[styles.chip, transactionCurrency === value && styles.chipSelected]}><Text style={{ color: transactionCurrency === value ? colors.teal : colors.ink }}>{value}</Text></Pressable>)}</View><Text style={styles.small}>{transactionCurrency === baseCurrency ? `Stored as ${baseCurrency}.` : rates ? `Uses the saved daily rate to lock this expense in ${baseCurrency}.` : `Connect once or update rates before adding a ${transactionCurrency} expense.`}</Text></View>
           <View><Text style={styles.fieldLabel}>Category</Text><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 9 }}>
             {CATEGORIES.map(item => <Pressable key={item} disabled={busy} accessibilityRole="button" accessibilityState={{ selected: category === item, disabled: busy }} onPress={() => setCategory(item)} style={[styles.chip, { flexDirection: 'row', alignItems: 'center', gap: 7 }, category === item && styles.chipSelected]}><Icon name={categoryMeta[item].icon} size={17} color={category === item ? colors.teal : categoryMeta[item].color} /><Text style={{ fontSize: 13, color: category === item ? colors.teal : colors.ink }}>{item}</Text></Pressable>)}
           </View></View>

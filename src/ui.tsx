@@ -3,6 +3,7 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View, type ColorValue, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ComponentProps, ReactNode } from 'react';
+import { displayMinor, validateRates } from './currency.ts';
 import { dateLabel, formatMoney, monthLabel, shiftMonth, type Category, type Currency, type Expense } from './expenses.ts';
 
 export const colors = { background: '#F5F7F5', white: '#FFFFFF', ink: '#17352F', muted: '#70817B', teal: '#167A63', pale: '#E6F2EC', line: '#E3EAE5', danger: '#B33A3A' };
@@ -59,13 +60,21 @@ export function EmptyState({ title, message, add = false }: { title: string; mes
     {add && <Button icon="add" onPress={() => router.push('/expense')}>Add your first expense</Button>}
   </Card>;
 }
-export function ExpenseRow({ expense, currency, last = false }: { expense: Expense; currency: Currency; last?: boolean }) {
+export function ExpenseRow({ expense, currency, baseCurrency = currency, last = false }: { expense: Expense; currency: Currency; baseCurrency?: Currency; last?: boolean }) {
   const meta = categoryMeta[expense.category] ?? categoryMeta.Other;
-  return <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${expense.category}, ${formatMoney(expense.amountMinor, currency)}, ${dateLabel(expense.date)}`} onPress={() => router.push({ pathname: '/expense', params: { id: String(expense.id) } })}
+  const snapshot = (() => {
+    if (!expense.rateSnapshot) return null;
+    try { return validateRates(JSON.parse(expense.rateSnapshot), baseCurrency); } catch { return null; }
+  })();
+  const converted = expense.originalCurrency === currency && expense.originalAmountMinor != null
+    ? expense.originalAmountMinor
+    : displayMinor(expense.amountMinor, baseCurrency, currency, snapshot);
+  const amount = converted === null ? formatMoney(expense.amountMinor, baseCurrency) : formatMoney(converted, currency);
+  return <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${expense.category}, ${amount}, ${dateLabel(expense.date)}`} onPress={() => router.push({ pathname: '/expense', params: { id: String(expense.id) } })}
     style={({ pressed }) => [styles.expenseRow, !last && { borderBottomWidth: 1, borderBottomColor: colors.line }, pressed && { opacity: 0.6 }]}>
     <View style={[styles.categoryIcon, { backgroundColor: meta.background }]}><Icon name={meta.icon} color={meta.color} size={21} /></View>
     <View style={{ flex: 1, gap: 4 }}><Text style={styles.rowTitle} numberOfLines={1}>{expense.note || expense.category}</Text><Text style={styles.small}>{expense.category}</Text></View>
-    <Text style={styles.amount}>{formatMoney(expense.amountMinor, currency)}</Text>
+    <Text style={styles.amount}>{amount}</Text>
     <Icon name="chevron-forward" size={15} color={colors.muted} />
   </Pressable>;
 }

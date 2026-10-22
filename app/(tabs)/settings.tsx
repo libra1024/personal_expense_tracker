@@ -6,7 +6,7 @@ import { Button, Card, colors, Header, Icon, Screen, styles } from '../../src/ui
 
 const names = { MXN: 'Mexican peso', USD: 'US dollar', EUR: 'Euro' };
 export default function Settings() {
-  const { currency, expenses, busy, store } = useExpenses();
+  const { currency, baseCurrency, rates, refreshingRates, rateWarning, expenses, busy, store } = useExpenses();
   const [error, setError] = useState('');
   const [sampleError, setSampleError] = useState('');
   const [sampleMessage, setSampleMessage] = useState('');
@@ -14,7 +14,7 @@ export default function Settings() {
     <Header title="Make it yours" subtitle="A few simple preferences." />
     <Card>
       <View style={styles.row}><Icon name="cash-outline" color={colors.teal} /><Text style={styles.sectionTitle}>Display currency</Text></View>
-      <Text style={styles.body}>Use one currency for all your expenses. Changing this setting updates labels only; it does not convert saved amounts.</Text>
+      <Text style={styles.body}>Your expenses are stored in {baseCurrency}. Display totals can use the latest available daily exchange rates; this never changes a saved expense.</Text>
       {CURRENCIES.map(value => <Pressable key={value} accessibilityRole="radio" accessibilityState={{ checked: value === currency, disabled: busy }} disabled={busy} onPress={async () => {
         setError('');
         try { await store.setCurrency(value); } catch { setError('Could not save your preference. Please try again.'); }
@@ -22,6 +22,9 @@ export default function Settings() {
         <View style={styles.row}><Text style={[styles.rowTitle, { width: 40 }]}>{value}</Text><Text style={styles.body}>{names[value]}</Text></View><Icon name={currency === value ? 'radio-button-on' : 'radio-button-off'} color={currency === value ? colors.teal : colors.muted} />
       </Pressable>)}
       {error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}
+      <Text style={styles.small}>{rates ? `Saved daily rates: ${rates.map(rate => `${rate.quote} · ${rate.date}`).join('  ')}` : 'No saved exchange rates yet. Base-currency expenses still work offline.'}</Text>
+      <Button secondary icon="refresh-outline" disabled={busy || refreshingRates} onPress={() => { void store.refreshRates(true); }}>{refreshingRates ? 'Updating rates…' : 'Update exchange rates'}</Button>
+      {rateWarning ? <Text accessibilityRole="alert" style={styles.error}>{rateWarning}</Text> : null}
     </Card>
     <Card>
       <View style={styles.row}><Icon name="flask-outline" color={colors.teal} /><Text style={styles.sectionTitle}>Sample expenses</Text></View>
