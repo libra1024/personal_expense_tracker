@@ -5,7 +5,7 @@ export const CATEGORIES = [
 export type Category = typeof CATEGORIES[number];
 export const CURRENCIES = ['MXN', 'USD', 'EUR'] as const;
 export type Currency = typeof CURRENCIES[number];
-export type ExpenseInput = { amountMinor: number; category: Category; date: string; note: string };
+export type ExpenseInput = { amountMinor: number; category: Category; date: string; note: string; originalAmountMinor?: number; originalCurrency?: Currency; rateSnapshot?: string };
 export type Expense = ExpenseInput & { id: number; createdAt: string };
 export type Draft = { amount: string; category: string; date: string; note: string };
 
@@ -57,6 +57,9 @@ export function validateInput(input: ExpenseInput): ExpenseInput {
   if (!CATEGORIES.includes(input.category)) throw new Error('Choose a category.');
   if (!isValidDate(input.date)) throw new Error('Choose a valid date.');
   if (input.note.length > 500) throw new Error('Keep the note under 500 characters.');
+  if (input.originalAmountMinor != null && (!Number.isSafeInteger(input.originalAmountMinor) || input.originalAmountMinor <= 0)) throw new Error('Enter a valid original amount.');
+  if (input.originalCurrency != null && !CURRENCIES.includes(input.originalCurrency)) throw new Error('Choose a supported original currency.');
+  if ((input.originalAmountMinor == null) !== (input.originalCurrency == null)) throw new Error('Original amount and currency must be saved together.');
   return { ...input, note: input.note.trim() };
 }
 export function validateDraft(draft: Draft): ExpenseInput {

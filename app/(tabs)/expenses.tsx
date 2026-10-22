@@ -7,7 +7,7 @@ import { useExpenses } from '../../src/provider';
 import { Button, colors, EmptyState, ExpenseRow, Header, MonthPicker, styles } from '../../src/ui';
 
 export default function Expenses() {
-  const { expenses, currency } = useExpenses();
+  const { expenses, currency, baseCurrency } = useExpenses();
   const [month, setMonth] = useState(monthKey);
   const [category, setCategory] = useState<Category>();
   const entries = filterExpenses(expenses, month, category);
@@ -27,6 +27,6 @@ export default function Expenses() {
         <Text style={styles.small}>{entries.length} {entries.length === 1 ? 'expense' : 'expenses'} · Tap to edit</Text>
       </View>}
       ListEmptyComponent={<EmptyState title={expenses.length ? 'Nothing here yet' : 'Your story starts here'} message={category ? 'No expenses match this category and month. Try another filter or add an expense.' : 'No expenses in this month. Add one to start tracking your spending.'} />}
-      renderItem={({ item }) => <View style={{ gap: 10 }}><Text accessibilityRole="header" style={[styles.small, { fontWeight: '600' }]}>{dateLabel(item.date)}</Text><View style={[styles.card, { paddingVertical: 3, gap: 0 }]}>{item.expenses.map((expense, index) => <ExpenseRow key={expense.id} expense={expense} currency={currency} last={index === item.expenses.length - 1} />)}</View></View>} />
+      renderItem={({ item }) => <View style={{ gap: 10 }}><Text accessibilityRole="header" style={[styles.small, { fontWeight: '600' }]}>{dateLabel(item.date)}</Text><View style={[styles.card, { paddingVertical: 3, gap: 0 }]}>{item.expenses.map((expense, index) => <ExpenseRow key={expense.id} expense={expense} currency={currency} baseCurrency={baseCurrency} last={index === item.expenses.length - 1} />)}</View></View>} />
   </SafeAreaView>;
 }

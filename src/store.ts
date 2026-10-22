@@ -1,15 +1,24 @@
 import type { Currency, Expense, ExpenseInput } from './expenses.ts';
 import { validateInput } from './expenses.ts';
+import { fetchRates, type Rate } from './currency.ts';
 import type { Repository } from './repository.ts';
 
-type Snapshot = { expenses: Expense[]; currency: Currency; ready: boolean; loading: boolean; busy: boolean; error: string | null };
+type Snapshot = { baseCurrency: Currency; rates: Rate[] | null; refreshingRates: boolean; rateWarning: string | null; expenses: Expense[]; currency: Currency; ready: boolean; loading: boolean; busy: boolean; error: string | null };
 
 export class ExpenseStore {
   private repository: Repository;
   private listeners = new Set<() => void>();
-  private state: Snapshot = { expenses: [], currency: 'MXN', ready: false, loading: false, busy: false, error: null };
+  private state: Snapshot = { baseCurrency: 'MXN', rates: null, refreshingRates: false, rateWarning: null, expenses: [], currency: 'MXN', ready: false, loading: false, busy: false, error: null };
 
-  constructor(repository: Repository) { this.repository = repository; }
+  private now: () => number;
+  private lastAttempt = -Infinity;
+  private request: typeof fetch;
+  private refresh: Promise<void> | undefined;
+  constructor(repository: Repository, options: { request?: typeof fetch; now?: () => number } = {}) {
+    this.repository = repository;
+    this.request = options.request ?? fetch;
+    this.now = options.now ?? Date.now;
+  }
   getSnapshot = (): Snapshot => this.state;
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
@@ -26,10 +35,32 @@ export class ExpenseStore {
       await this.repository.initialize();
       const expenses = await this.repository.list();
       const currency = await this.repository.getCurrency();
-      this.patch({ expenses, currency, ready: true });
+      const baseCurrency = await this.repository.getBaseCurrency();
+      const rates = await this.repository.getRateCache().catch(() => null);
+      this.patch({ expenses, currency, baseCurrency, rates, ready: true });
+      void this.refreshRates();
     } catch (error) {
       this.patch({ error: error instanceof Error ? error.message : 'Unable to open your expenses.' });
     } finally { this.patch({ loading: false }); }
+  }
+  refreshRates(force = false): Promise<void> {
+    if (this.refresh) return this.refresh;
+    if (!this.state.ready || (!force && this.now() - this.lastAttempt < 300000)) return Promise.resolve();
+    this.lastAttempt = this.now();
+    this.patch({ refreshingRates: true });
+    this.refresh = (async () => {
+      try {
+        const rates = await fetchRates(this.state.baseCurrency, this.request);
+        await this.repository.setRateCache(rates);
+        this.patch({ rates, rateWarning: null });
+      } catch {
+        this.patch({ rateWarning: 'Could not refresh rates. Saved rates may be out of date.' });
+      } finally {
+        this.patch({ refreshingRates: false });
+        this.refresh = undefined;
+      }
+    })();
+    return this.refresh;
   }
   private async mutate(action: () => Promise<void>): Promise<boolean> {
     if (this.state.busy || !this.state.ready) return false;
@@ -64,6 +95,7 @@ export class ExpenseStore {
     return this.mutate(async () => {
       await this.repository.setCurrency(currency);
       this.patch({ currency });
+      void this.refreshRates();
     });
   }
 }

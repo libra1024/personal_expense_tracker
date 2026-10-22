@@ -1,5 +1,6 @@
 import type { Currency, Expense } from '../../src/expenses.ts';
 import type { Repository } from '../../src/repository.ts';
+import type { Rate } from '../../src/currency.ts';
 import { createDemoExpenses } from '../../src/demo-data.ts';
 
 type Operation = keyof Repository;
@@ -9,6 +10,8 @@ type Options = { expenses?: readonly Expense[]; currency?: Currency; now?: () =>
 export function createMockRepository(options: Options = {}) {
   let entries = (options.expenses ?? []).map(expense => ({ ...expense }));
   let currency = options.currency ?? 'MXN';
+  const baseCurrency = currency;
+  let rates: Rate[] | null = null;
   let nextId = Math.max(0, ...entries.map(expense => expense.id)) + 1;
   let unavailable = false;
   const failures = new Map<Operation, Error[]>();
@@ -38,6 +41,9 @@ export function createMockRepository(options: Options = {}) {
       entries = createDemoExpenses(new Date(createdAt)).map(expense => ({ ...expense, id: nextId++, createdAt }));
       return entries.map(expense => ({ ...expense }));
     },
+    async getBaseCurrency() { await before('getBaseCurrency'); return baseCurrency; },
+    async getRateCache() { await before('getRateCache'); return rates?.map(r => ({ ...r })) ?? null; },
+    async setRateCache(value) { await before('setRateCache'); rates = value.map(r => ({ ...r })); },
     async getCurrency() { await before('getCurrency'); return currency; },
     async setCurrency(value) { await before('setCurrency'); currency = value; },
     async save(value, id) {

@@ -16,6 +16,9 @@ function nativeRepository(): Repository {
     remove: async id => (await get()).remove(id),
     getCurrency: async () => (await get()).getCurrency(),
     setCurrency: async currency => (await get()).setCurrency(currency),
+    getBaseCurrency: async () => (await get()).getBaseCurrency(),
+    getRateCache: async () => (await get()).getRateCache(),
+    setRateCache: async rates => (await get()).setRateCache(rates),
   };
 }
 

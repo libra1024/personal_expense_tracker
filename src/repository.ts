@@ -1,4 +1,5 @@
 import { CURRENCIES, validateInput, type Currency, type Expense, type ExpenseInput } from './expenses.ts';
+import { validateRates, type Rate } from './currency.ts';
 import { createDemoExpenses } from './demo-data.ts';
 
 type Param = string | number | null;
@@ -15,9 +16,9 @@ export function createRepository(db: Database, options: { demoData?: boolean; no
   return {
     async initialize() {
       const version = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
-      if ((version?.user_version ?? 0) > 1) throw new Error('This database was created by a newer app. Update the app to open it.');
+      if ((version?.user_version ?? 0) > 2) throw new Error('This database was created by a newer app. Update the app to open it.');
       await db.execAsync('PRAGMA journal_mode = WAL;');
-      if (version?.user_version !== 1) await db.execAsync(`
+      if ((version?.user_version ?? 0) === 0) await db.execAsync(`
         BEGIN TRANSACTION;
         CREATE TABLE IF NOT EXISTS expenses (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -25,16 +26,33 @@ export function createRepository(db: Database, options: { demoData?: boolean; no
           category TEXT NOT NULL,
           date TEXT NOT NULL,
           note TEXT NOT NULL DEFAULT '',
+          originalAmountMinor INTEGER,
+          originalCurrency TEXT,
+          rateSnapshot TEXT,
           createdAt TEXT NOT NULL
         );
         CREATE INDEX IF NOT EXISTS expenses_date ON expenses(date DESC);
         CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-        PRAGMA user_version = 1;
+        PRAGMA user_version = 2;
         COMMIT;
       `).catch(async (error: unknown) => {
         try { await db.execAsync('ROLLBACK;'); } catch { /* Preserve the initialization error. */ }
         throw error;
       });
+      if (version?.user_version === 1) await db.execAsync(`
+        BEGIN TRANSACTION;
+        ALTER TABLE expenses ADD COLUMN originalAmountMinor INTEGER;
+        ALTER TABLE expenses ADD COLUMN originalCurrency TEXT;
+        ALTER TABLE expenses ADD COLUMN rateSnapshot TEXT;
+        PRAGMA user_version = 2;
+        COMMIT;
+      `).catch(async (error: unknown) => {
+        try { await db.execAsync('ROLLBACK;'); } catch { /* Preserve the initialization error. */ }
+        throw error;
+      });
+      // One atomic, idempotent migration: never reinterpret amounts after display changes.
+      await db.runAsync(`INSERT OR IGNORE INTO settings (key, value)
+        SELECT 'baseCurrency', COALESCE((SELECT value FROM settings WHERE key = 'currency' AND value IN ('MXN', 'USD', 'EUR')), 'MXN')`);
       if (options.demoData) await seedDemoData(db, options.now?.() ?? new Date());
     },
     async list(): Promise<Expense[]> {
@@ -46,14 +64,29 @@ export function createRepository(db: Database, options: { demoData?: boolean; no
     async save(input: ExpenseInput, id?: number): Promise<number> {
       const item = validateInput(input);
       if (id !== undefined) {
-        const result = await db.runAsync('UPDATE expenses SET amountMinor = ?, category = ?, date = ?, note = ? WHERE id = ?', item.amountMinor, item.category, item.date, item.note, id);
+        const result = await db.runAsync('UPDATE expenses SET amountMinor = ?, category = ?, date = ?, note = ?, originalAmountMinor = ?, originalCurrency = ?, rateSnapshot = ? WHERE id = ?', item.amountMinor, item.category, item.date, item.note, item.originalAmountMinor ?? null, item.originalCurrency ?? null, item.rateSnapshot ?? null, id);
         if (!result.changes) throw new Error('This expense no longer exists.');
         return id;
       }
-      const result = await db.runAsync('INSERT INTO expenses (amountMinor, category, date, note, createdAt) VALUES (?, ?, ?, ?, ?)', item.amountMinor, item.category, item.date, item.note, new Date().toISOString());
+      const result = await db.runAsync('INSERT INTO expenses (amountMinor, category, date, note, originalAmountMinor, originalCurrency, rateSnapshot, createdAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', item.amountMinor, item.category, item.date, item.note, item.originalAmountMinor ?? null, item.originalCurrency ?? null, item.rateSnapshot ?? null, new Date().toISOString());
       return result.lastInsertRowId;
     },
     async remove(id: number) { await db.runAsync('DELETE FROM expenses WHERE id = ?', id); },
+    async getBaseCurrency(): Promise<Currency> {
+      const setting = await db.getFirstAsync<{ value: string }>("SELECT value FROM settings WHERE key = 'baseCurrency'");
+      if (!CURRENCIES.includes(setting?.value as Currency)) throw new Error('Unable to read the original currency.');
+      return setting!.value as Currency;
+    },
+    async getRateCache(): Promise<Rate[] | null> {
+      const base = await this.getBaseCurrency();
+      const setting = await db.getFirstAsync<{ value: string }>("SELECT value FROM settings WHERE key = 'exchangeRates'");
+      if (!setting) return null;
+      try { return validateRates(JSON.parse(setting.value), base); } catch { return null; }
+    },
+    async setRateCache(rates: Rate[]) {
+      const validated = validateRates(rates, await this.getBaseCurrency());
+      await db.runAsync("INSERT INTO settings (key, value) VALUES ('exchangeRates', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value", JSON.stringify(validated));
+    },
     async getCurrency(): Promise<Currency> {
       const setting = await db.getFirstAsync<{ value: string }>("SELECT value FROM settings WHERE key = 'currency'");
       return CURRENCIES.includes(setting?.value as Currency) ? setting!.value as Currency : 'MXN';
