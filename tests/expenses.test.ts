@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   parseAmount, formatMoney, monthKey, shiftMonth, localDate, isValidDate,
-  filterExpenses, summarize, groupByDate, validateDraft, timestampLabel,
+  filterExpenses, summarize, groupByDate, validateDraft, timestampLabel, calendarMonthDays,
 } from '../src/expenses.ts';
 
 test('decimal amounts become exact integer cents', () => {
@@ -37,6 +37,13 @@ test('calendar dates and month navigation do not use UTC or overflow at month en
 test('formats timestamps with the record date and hour', () => {
   assert.equal(timestampLabel('2026-10-22T11:45:00.000Z', 'en-US', 'UTC'), 'Oct 22, 2026, 11:45 AM');
   assert.equal(timestampLabel('not-a-date', 'en-US', 'UTC'), 'Unknown time');
+});
+
+test('builds complete Sunday-first calendar weeks for a month', () => {
+  const days = calendarMonthDays('2026-10');
+  assert.equal(days.length, 35);
+  assert.deepEqual(days.slice(0, 5), [null, null, null, null, '2026-10-01']);
+  assert.equal(days.at(-1), '2026-10-31');
 });
 
 const expenses = [

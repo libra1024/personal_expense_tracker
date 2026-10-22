@@ -47,6 +47,21 @@ export function monthLabel(month: string): string {
   const [year, index] = month.split('-').map(Number);
   return new Date(year, index - 1, 1, 12).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 }
+
+/** Sunday-first calendar cells; null values are leading/trailing visual padding. */
+export function calendarMonthDays(month: string): (string | null)[] {
+  if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) throw new Error('Choose a valid month.');
+  const [year, monthIndex] = month.split('-').map(Number);
+  const first = new Date(year, monthIndex - 1, 1, 12);
+  const leading = first.getDay();
+  const count = new Date(year, monthIndex, 0, 12).getDate();
+  const cells = Math.ceil((leading + count) / 7) * 7;
+  return Array.from({ length: cells }, (_, index) => {
+    const day = index - leading + 1;
+    return day >= 1 && day <= count ? `${month}-${day.toString().padStart(2, '0')}` : null;
+  });
+}
+
 export function dateLabel(value: string): string {
   const [year, month, day] = value.split('-').map(Number);
   return new Date(year, month - 1, day, 12).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
