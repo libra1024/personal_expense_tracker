@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
 import { router, useLocalSearchParams } from 'expo-router';
-import DateTimePicker from '@react-native-community/datetimepicker';
 import { Alert, BackHandler, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toBaseMinor } from '../src/domain/currency';
 import { CATEGORIES, CURRENCIES, dateLabel, localDate, parseAmount, timestampLabel, validateDraft, type Category, type Currency } from '../src/domain/expenses';
+import { ExpenseCalendar } from '../src/presentation/expense-calendar';
 import { useExpenses } from '../src/presentation/expense-provider';
 import { exitExpense } from '../src/navigation';
 import { Button, categoryMeta, colors, Icon, IconButton, styles } from '../src/presentation/ui';
@@ -63,7 +63,6 @@ export default function ExpenseForm() {
       } },
     ]);
   }
-  const [year, month, day] = date.split('-').map(Number);
   return <SafeAreaView style={styles.screen}>
     <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
       <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
@@ -77,8 +76,8 @@ export default function ExpenseForm() {
           <View><Text style={styles.fieldLabel}>Category</Text><View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 9 }}>
             {CATEGORIES.map(item => <Pressable key={item} disabled={busy} accessibilityRole="button" accessibilityState={{ selected: category === item, disabled: busy }} onPress={() => setCategory(item)} style={[styles.chip, { flexDirection: 'row', alignItems: 'center', gap: 7 }, category === item && styles.chipSelected]}><Icon name={categoryMeta[item].icon} size={17} color={category === item ? colors.teal : categoryMeta[item].color} /><Text style={{ fontSize: 13, color: category === item ? colors.teal : colors.ink }}>{item}</Text></Pressable>)}
           </View></View>
-          <View><Text style={styles.fieldLabel}>Date</Text><Pressable accessibilityRole="button" accessibilityLabel={`Expense date: ${dateLabel(date)}`} disabled={busy} onPress={() => setShowPicker(true)} style={[styles.input, styles.between]}><Text style={{ color: colors.ink, fontSize: 15 }}>{dateLabel(date)}</Text><Icon name="calendar-outline" color={colors.teal} size={21} /></Pressable>
-            {showPicker && <View><DateTimePicker mode="date" value={new Date(year, month - 1, day, 12)} minimumDate={new Date(1900, 0, 1)} maximumDate={new Date(9999, 11, 31)} display={Platform.OS === 'ios' ? 'spinner' : 'default'} themeVariant="light" onChange={(event, selected) => { if (Platform.OS !== 'ios') setShowPicker(false); if (event.type !== 'dismissed' && selected) setDate(localDate(selected)); }} />{Platform.OS === 'ios' && <Button secondary onPress={() => setShowPicker(false)}>Done</Button>}</View>}
+          <View><Text style={styles.fieldLabel}>Date</Text><Pressable accessibilityRole="button" accessibilityLabel={`Expense date: ${dateLabel(date)}`} disabled={busy} onPress={() => setShowPicker(value => !value)} style={[styles.input, styles.between]}><Text style={{ color: colors.ink, fontSize: 15 }}>{dateLabel(date)}</Text><Icon name={showPicker ? 'chevron-up' : 'calendar-outline'} color={colors.teal} size={21} /></Pressable>
+            {showPicker ? <ExpenseCalendar value={date} disabled={busy} onChange={selected => { setDate(selected); setShowPicker(false); }} /> : null}
           </View>
           <View><Text style={styles.fieldLabel}>Note <Text style={{ color: colors.muted, fontWeight: '400' }}>(optional)</Text></Text><TextInput accessibilityLabel="Expense note, optional" editable={!busy} multiline maxLength={500} value={note} onChangeText={setNote} placeholder="What was it for?" placeholderTextColor={colors.muted} style={[styles.input, { minHeight: 90, textAlignVertical: 'top' }]} /></View>
           {editing && original ? <View style={[styles.card, { padding: 15, gap: 5 }]}><Text style={styles.small}>Created · {timestampLabel(original.createdAt)}</Text><Text style={styles.small}>Last modified · {timestampLabel(original.updatedAt)}</Text></View> : null}
