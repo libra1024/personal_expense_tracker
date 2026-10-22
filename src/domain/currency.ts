@@ -14,22 +14,6 @@ export function convertMinor(minor: number, rate: number): number {
   return Number(rounded);
 }
 
-export async function fetchRates(base: Currency, request: typeof fetch = fetch, timeoutMs = 8000): Promise<Rate[]> {
-  const quotes = CURRENCIES.filter(c => c !== base).join(',');
-  const controller = new AbortController();
-  let timer: ReturnType<typeof setTimeout> | undefined;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => { reject(new Error('Exchange rate request timed out.')); controller.abort(); }, timeoutMs);
-  });
-  try {
-    return await Promise.race([timeout, (async () => {
-      const response = await request(`https://api.frankfurter.dev/v2/rates?base=${base}&quotes=${quotes}`, { signal: controller.signal });
-      if (!response.ok) throw new Error(`Exchange rate service returned ${response.status}.`);
-      return validateRates(await response.json(), base);
-    })()]);
-  } finally { clearTimeout(timer); }
-}
-
 export function displayMinor(minor: number, base: Currency, target: Currency, rates: readonly Rate[] | null): number | null {
   if (base === target) return minor;
   const rate = rates?.find(item => item.base === base && item.quote === target)?.rate;

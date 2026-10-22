@@ -1,9 +1,11 @@
 import { createContext, useContext, useEffect, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { openDatabaseAsync } from 'expo-sqlite';
+import { createFrankfurterRateProvider } from '../infrastructure/frankfurter-rate-provider.ts';
 import { createRepository } from '../infrastructure/sqlite-expense-repository.ts';
 import type { ExpenseRepository } from '../application/expense-repository.ts';
 import { ExpenseStore } from '../application/expense-store.ts';
 
+/** Creates a lazy Expo SQLite adapter so presentation composes infrastructure without exposing it to screens. */
 function nativeRepository(): ExpenseRepository {
   let connection: Promise<ExpenseRepository> | undefined;
   const get = () => connection ??= openDatabaseAsync('pocket-expenses.db')
@@ -24,8 +26,9 @@ function nativeRepository(): ExpenseRepository {
 }
 
 const StoreContext = createContext<ExpenseStore | null>(null);
+/** Supplies the composed offline store to React screens and initializes it after mounting. */
 export function ExpenseProvider({ children }: { children: ReactNode }) {
-  const [store] = useState(() => new ExpenseStore(nativeRepository()));
+  const [store] = useState(() => new ExpenseStore(nativeRepository(), createFrankfurterRateProvider()));
   useEffect(() => { void store.initialize(); }, [store]);
   return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }

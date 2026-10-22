@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { createFrankfurterRateProvider } from '../src/infrastructure/frankfurter-rate-provider.ts';
 import * as currency from '../src/currency.ts';
 import type { Rate } from '../src/currency.ts';
 
@@ -15,19 +16,19 @@ test('converts from original cents with decimal half-up rounding and detects ove
 
 test('fetches only currency codes with dynamic base and validates the response', async () => {
   let request = '';
-  const rates = await currency.fetchRates('MXN', async (url, options) => {
+  const rates = await createFrankfurterRateProvider(async (url, options) => {
     request = String(url); assert.ok(options?.signal);
     return new Response(JSON.stringify(rows));
-  });
+  }).fetchRates('MXN');
   assert.equal(request, 'https://api.frankfurter.dev/v2/rates?base=MXN&quotes=USD,EUR');
   assert.deepEqual(rates, rows);
-  await currency.fetchRates('USD', async url => {
+  await createFrankfurterRateProvider(async url => {
     assert.equal(String(url), 'https://api.frankfurter.dev/v2/rates?base=USD&quotes=MXN,EUR');
     return new Response(JSON.stringify(rows.map((r, i) => ({ ...r, base: 'USD', quote: i ? 'MXN' : 'EUR' }))));
-  });
-  await assert.rejects(currency.fetchRates('MXN', async () => new Response('[]')), /rates/i);
-  await assert.rejects(currency.fetchRates('MXN', async () => new Response('bad', { status: 503 })), /503/);
-  await assert.rejects(currency.fetchRates('MXN', async () => new Response('bad')));
+  }).fetchRates('USD');
+  await assert.rejects(createFrankfurterRateProvider(async () => new Response('[]')).fetchRates('MXN'), /rates/i);
+  await assert.rejects(createFrankfurterRateProvider(async () => new Response('bad', { status: 503 })).fetchRates('MXN'), /503/);
+  await assert.rejects(createFrankfurterRateProvider(async () => new Response('bad')).fetchRates('MXN'));
 });
 
 test('timeout bounds hanging fetch and body reads even if abort is ignored', async () => {
@@ -39,7 +40,7 @@ test('timeout bounds hanging fetch and body reads even if abort is ignored', asy
       return { ok: true, json: () => new Promise(() => {}) } as Response;
     };
     await assert.rejects(Promise.race([
-      currency.fetchRates('MXN', hanging, 5),
+      createFrankfurterRateProvider(hanging, 5).fetchRates('MXN'),
       new Promise((_, reject) => { setTimeout(() => reject(new Error('Test watchdog')), 150); }),
     ]), /timed out/i);
     assert.equal(signal?.aborted, true);
