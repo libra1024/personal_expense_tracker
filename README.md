@@ -45,8 +45,10 @@ The tests require no installed npm packages. They use Node's test runner and rea
 
 - All 30 automated tests passed, including automatic and explicit sample-data loading, preservation of existing expenses, rollback on import failure, safe exit from directly linked forms, and storage failure recovery.
 - Full application TypeScript checking and ESLint passed after dependencies became available.
-- Android production bundle export succeeded (`expo export --platform android`).
-- Physical-device behavior remains unverified. This environment cannot bind a local development server port (`EPERM`), so start Metro from your own terminal to connect Expo Go. A successful bundle export does not confirm that a phone has loaded that bundle.
+- Android and iOS production bundle exports succeeded (`npx expo export --platform all`).
+- Expo dependency compatibility checking passes after aligning Expo, Expo Router, and TypeScript. React DOM is pinned to match React, and Expo Font is explicitly aligned with SDK 57 to prevent incompatible peer resolution.
+- npm reported 22 audit findings (3 moderate, 19 high) during installation. These remain unresolved; do not apply breaking upgrades with `npm audit fix --force` without review.
+- Physical-device behavior remains unverified. An earlier environment reported `EPERM` when binding a development server; this verification did not retest that restriction. Start Metro from your terminal to connect Expo Go. A successful bundle export does not confirm that a phone has loaded that bundle.
 
 ## If samples do not appear on the phone
 
