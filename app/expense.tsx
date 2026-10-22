@@ -5,9 +5,9 @@ import { Alert, BackHandler, KeyboardAvoidingView, Platform, Pressable, ScrollVi
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toBaseMinor } from '../src/domain/currency';
 import { CATEGORIES, CURRENCIES, dateLabel, localDate, parseAmount, validateDraft, type Category, type Currency } from '../src/domain/expenses';
-import { useExpenses } from '../src/provider';
+import { useExpenses } from '../src/presentation/expense-provider';
 import { exitExpense } from '../src/navigation';
-import { Button, categoryMeta, colors, Icon, IconButton, styles } from '../src/ui';
+import { Button, categoryMeta, colors, Icon, IconButton, styles } from '../src/presentation/ui';
 
 export default function ExpenseForm() {
   const { id: rawId } = useLocalSearchParams<{ id?: string }>();

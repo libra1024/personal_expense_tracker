@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { colors, Icon } from '../../src/ui';
+import { colors, Icon } from '../../src/presentation/ui';
 
 export default function TabLayout() {
   return <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.teal, tabBarInactiveTintColor: colors.muted, tabBarStyle: { backgroundColor: colors.white, borderTopColor: colors.line }, tabBarLabelStyle: { fontSize: 11, fontWeight: '600' }, tabBarItemStyle: { paddingVertical: 4 } }}>
