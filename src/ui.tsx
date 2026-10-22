@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { Pressable, ScrollView, StyleSheet, Text, View, type ColorValue, type StyleProp, type ViewStyle } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import type { ComponentProps, ReactNode } from 'react';
-import { displayMinor, validateRates } from './currency.ts';
+import { historicalExpenseMinor } from './currency.ts';
 import { dateLabel, formatMoney, monthLabel, shiftMonth, type Category, type Currency, type Expense } from './expenses.ts';
 
 export const colors = { background: '#F5F7F5', white: '#FFFFFF', ink: '#17352F', muted: '#70817B', teal: '#167A63', pale: '#E6F2EC', line: '#E3EAE5', danger: '#B33A3A' };
@@ -62,13 +62,7 @@ export function EmptyState({ title, message, add = false }: { title: string; mes
 }
 export function ExpenseRow({ expense, currency, baseCurrency = currency, last = false }: { expense: Expense; currency: Currency; baseCurrency?: Currency; last?: boolean }) {
   const meta = categoryMeta[expense.category] ?? categoryMeta.Other;
-  const snapshot = (() => {
-    if (!expense.rateSnapshot) return null;
-    try { return validateRates(JSON.parse(expense.rateSnapshot), baseCurrency); } catch { return null; }
-  })();
-  const converted = expense.originalCurrency === currency && expense.originalAmountMinor != null
-    ? expense.originalAmountMinor
-    : displayMinor(expense.amountMinor, baseCurrency, currency, snapshot);
+  const converted = historicalExpenseMinor(expense, baseCurrency, currency);
   const amount = converted === null ? formatMoney(expense.amountMinor, baseCurrency) : formatMoney(converted, currency);
   return <Pressable accessibilityRole="button" accessibilityLabel={`Edit ${expense.category}, ${amount}, ${dateLabel(expense.date)}`} onPress={() => router.push({ pathname: '/expense', params: { id: String(expense.id) } })}
     style={({ pressed }) => [styles.expenseRow, !last && { borderBottomWidth: 1, borderBottomColor: colors.line }, pressed && { opacity: 0.6 }]}>
