@@ -1,8 +1,8 @@
 import { Stack } from 'expo-router';
 import { ActivityIndicator, StatusBar, Text, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ExpenseProvider, useExpenses } from '../src/provider';
-import { Button, colors, Icon, styles } from '../src/ui';
+import { ExpenseProvider, useExpenses } from '../src/presentation/expense-provider';
+import { Button, colors, Icon, styles } from '../src/presentation/ui';
 
 export const unstable_settings = { anchor: '(tabs)' };
 
