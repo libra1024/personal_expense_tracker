@@ -1,0 +1,14 @@
+{
+  "expo": {
+    "name": "Pocket · Expense Tracker",
+    "slug": "expense-tracker",
+    "scheme": "pocketexpenses",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "platforms": ["ios", "android"],
+    "plugins": ["expo-router", "expo-sqlite"],
+    "ios": { "supportsTablet": true },
+    "android": { "predictiveBackGestureEnabled": true }
+  }
+}
