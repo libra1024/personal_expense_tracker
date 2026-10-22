@@ -19,6 +19,12 @@
 - Verify branch ancestry and a clean working tree after merging. Leave the checkout on `development` when the task is complete.
 - If a remote is configured and publishing is requested, use pull requests targeting `development`, not `main`. Do not push or create a remote without user authorization.
 
+## Code quality
+
+- Use clear, significant names for classes, functions, variables, and parameters. Avoid ambiguous abbreviations and single-letter names except conventional, short-lived loop indexes.
+- After every code creation or modification, run `npm run lint`. Keep ESLint clean; use Prettier if it is introduced or configured for the project.
+- Apply formatting only through the configured formatter/linter. Do not hand-format unrelated code.
+
 ## Bootstrap
 
 The existing app was committed on `feat/expense-tracker` as the common initial baseline for `main` and `development`. Subsequent changes follow the workflow above.
