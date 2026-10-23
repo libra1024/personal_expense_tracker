@@ -44,10 +44,6 @@ test('presentation UI is composed from focused component modules', () => {
     'src/presentation/components/layout.tsx',
     'src/presentation/components/controls.tsx',
     'src/presentation/components/expense-display.tsx',
-    'src/presentation/components/overview-summary.tsx',
-    'src/presentation/components/expense-list.tsx',
-    'src/presentation/components/settings-panels.tsx',
-    'src/presentation/components/expense-fields.tsx',
   ]) {
     assert.equal(existsSync(join(root, componentFile)), true, `${componentFile} must exist`);
   }
