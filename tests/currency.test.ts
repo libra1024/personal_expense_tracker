@@ -72,18 +72,21 @@ test('uses the exact base amount until a complete target rate is available', () 
   assert.equal(currency.displayMinor(10000, 'MXN', 'USD', [{ ...rows[0], quote: 'EUR' }]), null);
 });
 
+/** Keeps currency conversion on its canonical helpers rather than a test-only forwarding alias. */
+test('currency module omits the unused historical forwarding alias', () => {
+  assert.equal('displayHistoricalMinor' in currency, false);
+});
+
+/** Checks exact conversion against explicitly supplied historical rates. */
 test('locks a transaction into its historical base amount and never uses a newer cache', () => {
   const snapshot: Rate[] = [
     { date: '2026-10-21', base: 'MXN', quote: 'USD', rate: 1 / 18 },
     { date: '2026-10-21', base: 'MXN', quote: 'EUR', rate: 0.05 },
   ];
   assert.equal(currency.toBaseMinor(8000, 'USD', 'MXN', snapshot), 144000);
-  assert.equal(currency.displayHistoricalMinor(144000, 'MXN', 'USD', snapshot), 8000);
+  assert.equal(currency.displayMinor(144000, 'MXN', 'USD', snapshot), 8000);
   assert.equal(
-    currency.displayHistoricalMinor(144000, 'MXN', 'USD', [
-      { ...snapshot[0], rate: 1 / 20 },
-      snapshot[1],
-    ]),
+    currency.displayMinor(144000, 'MXN', 'USD', [{ ...snapshot[0], rate: 1 / 20 }, snapshot[1]]),
     7200,
   );
   assert.equal(currency.toBaseMinor(8000, 'USD', 'MXN', null), null);
