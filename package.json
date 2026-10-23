@@ -36,7 +36,7 @@
     "react-native-worklets": "0.10.1"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "4.1.12",
+    "@tailwindcss/postcss": "4.3.3",
     "@types/node": "^24.0.0",
     "@types/react": "~19.2.2",
     "babel-preset-expo": "~57.0.0",
@@ -46,7 +46,7 @@
     "postcss": "8.5.31",
     "prettier": "^3.9.10",
     "prettier-plugin-tailwindcss": "0.8.1",
-    "tailwindcss": "4.1.12",
+    "tailwindcss": "4.3.3",
     "typescript": "~6.0.3"
   },
   "engines": {
