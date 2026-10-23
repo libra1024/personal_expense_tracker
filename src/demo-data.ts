@@ -1,4 +1,4 @@
-import { localDate, type ExpenseInput } from './expenses.ts';
+import { localDate, type ExpenseInput } from './domain/expenses.ts';
 
 /** Fictional starter records, dated within the current local month for a visible overview. */
 export function createDemoExpenses(today = new Date()): ExpenseInput[] {

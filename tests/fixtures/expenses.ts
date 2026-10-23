@@ -1,4 +1,4 @@
-import type { Expense } from '../../src/expenses.ts';
+import type { Expense } from '../../src/domain/expenses.ts';
 
 /** Fictional records covering multiple days and months. Never loaded by the app. */
 export const sampleExpenses: readonly Expense[] = [
