@@ -70,3 +70,21 @@ test('routes and components no longer depend on grouped screen UI modules', () =
     }
   }
 });
+
+/** Prevents styles replaced by Tailwind from remaining in the shared native stylesheet. */
+test('shared native stylesheet contains no unreferenced entries', () => {
+  const theme = readFileSync(join(componentRoot, 'theme.ts'), 'utf8');
+  const definitions = [...theme.split('StyleSheet.create({')[1].matchAll(/^  (\w+):/gm)]
+    .map((match) => match[1])
+    .sort();
+  const consumers = ['app', 'src'].flatMap((directory) => {
+    const root = join(projectRoot, directory);
+    return readdirSync(root, { recursive: true, encoding: 'utf8' })
+      .filter((filename) => /\.tsx?$/.test(filename))
+      .flatMap((filename) => [
+        ...readFileSync(join(root, filename), 'utf8').matchAll(/\bstyles\.(\w+)/g),
+      ])
+      .map((match) => match[1]);
+  });
+  assert.deepEqual(definitions, [...new Set(consumers)].sort());
+});
