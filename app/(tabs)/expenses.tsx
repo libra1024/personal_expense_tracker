@@ -1,68 +1,35 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
-import { FlatList, Pressable, ScrollView, Text, View } from 'react-native';
+import { FlatList, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import {
-  CATEGORIES,
-  dateLabel,
-  filterExpenses,
-  groupByDate,
-  monthKey,
-  type Category,
-} from '../../src/domain/expenses';
-import { useExpenses } from '../../src/presentation/expense-provider';
+import { filterExpenses, groupByDate, monthKey, type Category } from '../../src/domain/expenses';
 import { Button, MonthPicker } from '../../src/presentation/components/controls';
-import { EmptyState, ExpenseRow } from '../../src/presentation/components/expense-display';
+import { EmptyState } from '../../src/presentation/components/expense-display';
+import { CategoryFilter, DailyExpenseGroup } from '../../src/presentation/components/expense-list';
 import { Header } from '../../src/presentation/components/layout';
-import { colors, styles } from '../../src/presentation/components/theme';
+import { useExpenses } from '../../src/presentation/expense-provider';
 
+/** Lists the saved expenses for the selected month and optional category filter. */
 export default function Expenses() {
   const { expenses, currency, baseCurrency } = useExpenses();
   const [month, setMonth] = useState(monthKey);
   const [category, setCategory] = useState<Category>();
   const entries = filterExpenses(expenses, month, category);
   return (
-    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
+    <SafeAreaView className="flex-1 bg-[#F5F7F5]" edges={['top', 'left', 'right']}>
       <FlatList
         data={groupByDate(entries)}
         keyExtractor={(group) => group.date}
-        contentContainerStyle={[styles.content, { paddingTop: 22, flexGrow: 1 }]}
+        contentContainerClassName="w-full max-w-[680px] self-center gap-6 px-[22px] pb-[34px] pt-[22px]"
         ListHeaderComponent={
-          <View style={{ gap: 22 }}>
+          <View className="gap-[22px]">
             <Header title="Your expenses" subtitle="A little record of your everyday." />
             <Button icon="add" onPress={() => router.push('/expense')}>
               Add expense
             </Button>
             <MonthPicker value={month} onChange={setMonth} />
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={{ gap: 8 }}
-            >
-              {(['All', ...CATEGORIES] as const).map((item) => {
-                const selected = item === (category ?? 'All');
-                return (
-                  <Pressable
-                    key={item}
-                    accessibilityRole="button"
-                    accessibilityState={{ selected }}
-                    onPress={() => setCategory(item === 'All' ? undefined : item)}
-                    style={[styles.chip, selected && styles.chipSelected]}
-                  >
-                    <Text
-                      style={{
-                        color: selected ? colors.teal : colors.muted,
-                        fontSize: 13,
-                        fontWeight: selected ? '600' : '400',
-                      }}
-                    >
-                      {item}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
-            <Text style={styles.small}>
+            <CategoryFilter value={category} onChange={setCategory} />
+            <Text className="text-xs leading-[18px] text-[#70817B]">
               {entries.length} {entries.length === 1 ? 'expense' : 'expenses'} · Tap to edit
             </Text>
           </View>
@@ -78,22 +45,12 @@ export default function Expenses() {
           />
         }
         renderItem={({ item }) => (
-          <View style={{ gap: 10 }}>
-            <Text accessibilityRole="header" style={[styles.small, { fontWeight: '600' }]}>
-              {dateLabel(item.date)}
-            </Text>
-            <View style={[styles.card, { paddingVertical: 3, gap: 0 }]}>
-              {item.expenses.map((expense, index) => (
-                <ExpenseRow
-                  key={expense.id}
-                  expense={expense}
-                  currency={currency}
-                  baseCurrency={baseCurrency}
-                  last={index === item.expenses.length - 1}
-                />
-              ))}
-            </View>
-          </View>
+          <DailyExpenseGroup
+            date={item.date}
+            expenses={item.expenses}
+            currency={currency}
+            baseCurrency={baseCurrency}
+          />
         )}
       />
     </SafeAreaView>

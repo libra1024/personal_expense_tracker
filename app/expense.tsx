@@ -6,18 +6,13 @@ import {
   BackHandler,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { toBaseMinor } from '../src/domain/currency';
 import {
-  CATEGORIES,
-  CURRENCIES,
-  dateLabel,
   localDate,
   parseAmount,
   timestampLabel,
@@ -25,18 +20,24 @@ import {
   type Category,
   type Currency,
 } from '../src/domain/expenses';
-import { useExpenses } from '../src/presentation/expense-provider';
 import { exitExpense } from '../src/navigation';
 import { Button, IconButton } from '../src/presentation/components/controls';
-import { categoryMeta } from '../src/presentation/components/expense-display';
-import { Icon } from '../src/presentation/components/icon';
-import { colors, styles } from '../src/presentation/components/theme';
+import {
+  AmountField,
+  CategoryField,
+  DateField,
+  ExpenseAudit,
+  NoteField,
+  TransactionCurrencyField,
+} from '../src/presentation/components/expense-fields';
+import { useExpenses } from '../src/presentation/expense-provider';
 
+/** Creates or updates one expense while retaining its original currency and exchange-rate snapshot. */
 export default function ExpenseForm() {
   const { id: rawId } = useLocalSearchParams<{ id?: string }>();
   const id = rawId === undefined ? undefined : Number(rawId);
   const { expenses, baseCurrency, rates, busy, store } = useExpenses();
-  const original = expenses.find((e) => e.id === id);
+  const original = expenses.find((expense) => expense.id === id);
   const [amount, setAmount] = useState(() => {
     const minor = original?.originalAmountMinor ?? original?.amountMinor;
     return minor ? `${Math.floor(minor / 100)}.${String(minor % 100).padStart(2, '0')}` : '';
@@ -62,6 +63,7 @@ export default function ExpenseForm() {
     date !== (original?.date ?? localDate()) ||
     note !== (original?.note ?? '');
 
+  /** Returns to the prior screen after confirming any unsaved changes. */
   function close() {
     if (busy) return;
     if (!dirty) {
@@ -73,6 +75,7 @@ export default function ExpenseForm() {
       { text: 'Discard', style: 'destructive', onPress: () => exitExpense(router) },
     ]);
   }
+
   useEffect(() => {
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       close();
@@ -81,6 +84,7 @@ export default function ExpenseForm() {
     return () => subscription.remove();
   });
 
+  /** Validates and persists the draft while preventing duplicate in-flight submissions. */
   async function save() {
     if (busy || finishing.current) return;
     setError('');
@@ -93,10 +97,11 @@ export default function ExpenseForm() {
         baseCurrency,
         rates,
       );
-      if (amountMinor === null)
+      if (amountMinor === null) {
         throw new Error(
           `Saved ${baseCurrency} rates are required before recording a ${transactionCurrency} expense.`,
         );
+      }
       const input = {
         ...draft,
         amountMinor,
@@ -114,6 +119,8 @@ export default function ExpenseForm() {
       );
     }
   }
+
+  /** Soft-deletes the existing expense after an explicit destructive-action confirmation. */
   function remove() {
     if (id === undefined || busy) return;
     Alert.alert('Delete expense?', 'This expense will be permanently removed.', [
@@ -135,18 +142,27 @@ export default function ExpenseForm() {
       },
     ]);
   }
+
   const [year, month, day] = date.split('-').map(Number);
   return (
-    <SafeAreaView style={styles.screen}>
+    <SafeAreaView className="flex-1 bg-[#F5F7F5]">
       <KeyboardAvoidingView
-        style={{ flex: 1 }}
+        className="flex-1"
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={styles.content}>
-          <View style={styles.between}>
+        <ScrollView
+          keyboardShouldPersistTaps="handled"
+          contentContainerClassName="w-full max-w-[680px] self-center gap-6 px-[22px] pb-[34px]"
+        >
+          <View className="flex-row items-center justify-between gap-3">
             <View>
-              <Text style={styles.eyebrow}>KEEP THE LITTLE THINGS IN VIEW</Text>
-              <Text accessibilityRole="header" style={[styles.title, { fontSize: 28 }]}>
+              <Text className="mb-[13px] text-[10px] font-bold tracking-[1.8px] text-[#167A63]">
+                KEEP THE LITTLE THINGS IN VIEW
+              </Text>
+              <Text
+                accessibilityRole="header"
+                className="text-[28px] font-bold tracking-[-1px] text-[#17352F]"
+              >
                 {editing ? 'Edit expense' : 'Add expense'}
               </Text>
             </View>
@@ -154,175 +170,74 @@ export default function ExpenseForm() {
           </View>
           {missing ? (
             <>
-              <Text accessibilityRole="alert" style={styles.error}>
+              <Text accessibilityRole="alert" className="text-sm leading-[21px] text-[#B33A3A]">
                 This expense no longer exists.
               </Text>
               <Button onPress={() => exitExpense(router)}>Back to expenses</Button>
             </>
           ) : (
             <>
-              <View style={[styles.card, { paddingVertical: 26, gap: 8 }]}>
-                <Text style={styles.fieldLabel}>
-                  How much did you spend? · {transactionCurrency}
-                </Text>
-                <TextInput
-                  accessibilityLabel={`Amount in ${transactionCurrency}`}
-                  editable={!busy}
-                  autoFocus={!editing}
-                  value={amount}
-                  onChangeText={setAmount}
-                  keyboardType="decimal-pad"
-                  placeholder="0.00"
-                  placeholderTextColor="#B2C0B8"
-                  maxLength={20}
-                  style={{ color: colors.ink, fontSize: 44, fontWeight: '600', paddingVertical: 8 }}
-                />
-              </View>
-              <View>
-                <Text style={styles.fieldLabel}>Transaction currency</Text>
-                <View style={{ flexDirection: 'row', gap: 9 }}>
-                  {CURRENCIES.map((value) => (
-                    <Pressable
-                      key={value}
-                      disabled={busy}
-                      accessibilityRole="radio"
-                      accessibilityState={{
-                        checked: value === transactionCurrency,
-                        disabled: busy,
-                      }}
-                      onPress={() => setTransactionCurrency(value)}
-                      style={[styles.chip, transactionCurrency === value && styles.chipSelected]}
-                    >
-                      <Text
-                        style={{ color: transactionCurrency === value ? colors.teal : colors.ink }}
-                      >
-                        {value}
-                      </Text>
-                    </Pressable>
-                  ))}
+              <AmountField
+                value={amount}
+                currency={transactionCurrency}
+                editable={!busy}
+                autoFocus={!editing}
+                onChange={setAmount}
+              />
+              <TransactionCurrencyField
+                value={transactionCurrency}
+                baseCurrency={baseCurrency}
+                hasRates={!!rates}
+                disabled={busy}
+                onChange={setTransactionCurrency}
+              />
+              <CategoryField value={category} disabled={busy} onChange={setCategory} />
+              <DateField value={date} disabled={busy} onPress={() => setShowPicker(true)} />
+              {showPicker ? (
+                <View>
+                  <DateTimePicker
+                    mode="date"
+                    value={new Date(year, month - 1, day, 12)}
+                    minimumDate={new Date(1900, 0, 1)}
+                    maximumDate={new Date(9999, 11, 31)}
+                    display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+                    themeVariant="light"
+                    onChange={(event, selected) => {
+                      if (Platform.OS !== 'ios') setShowPicker(false);
+                      if (event.type !== 'dismissed' && selected) setDate(localDate(selected));
+                    }}
+                  />
+                  {Platform.OS === 'ios' ? (
+                    <Button secondary onPress={() => setShowPicker(false)}>
+                      Done
+                    </Button>
+                  ) : null}
                 </View>
-                <Text style={styles.small}>
-                  {transactionCurrency === baseCurrency
-                    ? `Stored as ${baseCurrency}.`
-                    : rates
-                      ? `Uses the saved daily rate to lock this expense in ${baseCurrency}.`
-                      : `Connect once or update rates before adding a ${transactionCurrency} expense.`}
-                </Text>
-              </View>
-              <View>
-                <Text style={styles.fieldLabel}>Category</Text>
-                <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 9 }}>
-                  {CATEGORIES.map((item) => (
-                    <Pressable
-                      key={item}
-                      disabled={busy}
-                      accessibilityRole="button"
-                      accessibilityState={{ selected: category === item, disabled: busy }}
-                      onPress={() => setCategory(item)}
-                      style={[
-                        styles.chip,
-                        { flexDirection: 'row', alignItems: 'center', gap: 7 },
-                        category === item && styles.chipSelected,
-                      ]}
-                    >
-                      <Icon
-                        name={categoryMeta[item].icon}
-                        size={17}
-                        color={category === item ? colors.teal : categoryMeta[item].color}
-                      />
-                      <Text
-                        style={{
-                          fontSize: 13,
-                          color: category === item ? colors.teal : colors.ink,
-                        }}
-                      >
-                        {item}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
-              </View>
-              <View>
-                <Text style={styles.fieldLabel}>Date</Text>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel={`Expense date: ${dateLabel(date)}`}
-                  disabled={busy}
-                  onPress={() => setShowPicker(true)}
-                  style={[styles.input, styles.between]}
-                >
-                  <Text style={{ color: colors.ink, fontSize: 15 }}>{dateLabel(date)}</Text>
-                  <Icon name="calendar-outline" color={colors.teal} size={21} />
-                </Pressable>
-                {showPicker && (
-                  <View>
-                    <DateTimePicker
-                      mode="date"
-                      value={new Date(year, month - 1, day, 12)}
-                      minimumDate={new Date(1900, 0, 1)}
-                      maximumDate={new Date(9999, 11, 31)}
-                      display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-                      themeVariant="light"
-                      onChange={(event, selected) => {
-                        if (Platform.OS !== 'ios') setShowPicker(false);
-                        if (event.type !== 'dismissed' && selected) setDate(localDate(selected));
-                      }}
-                    />
-                    {Platform.OS === 'ios' && (
-                      <Button secondary onPress={() => setShowPicker(false)}>
-                        Done
-                      </Button>
-                    )}
-                  </View>
-                )}
-              </View>
-              <View>
-                <Text style={styles.fieldLabel}>
-                  Note <Text style={{ color: colors.muted, fontWeight: '400' }}>(optional)</Text>
-                </Text>
-                <TextInput
-                  accessibilityLabel="Expense note, optional"
-                  editable={!busy}
-                  multiline
-                  maxLength={500}
-                  value={note}
-                  onChangeText={setNote}
-                  placeholder="What was it for?"
-                  placeholderTextColor={colors.muted}
-                  style={[styles.input, { minHeight: 90, textAlignVertical: 'top' }]}
-                />
-              </View>
+              ) : null}
+              <NoteField value={note} editable={!busy} onChange={setNote} />
               {editing && original ? (
-                <View style={[styles.card, { padding: 15, gap: 5 }]}>
-                  <Text style={styles.small}>Created · {timestampLabel(original.createdAt)}</Text>
-                  <Text style={styles.small}>
-                    Last modified · {timestampLabel(original.updatedAt)}
-                  </Text>
-                </View>
+                <ExpenseAudit
+                  createdAt={timestampLabel(original.createdAt)}
+                  updatedAt={timestampLabel(original.updatedAt)}
+                />
               ) : null}
               {error ? (
                 <Text
                   accessibilityRole="alert"
                   accessibilityLiveRegion="assertive"
-                  style={styles.error}
+                  className="text-sm leading-[21px] text-[#B33A3A]"
                 >
                   {error}
                 </Text>
               ) : null}
-              <Button
-                icon="checkmark"
-                onPress={() => {
-                  void save();
-                }}
-                disabled={busy}
-              >
+              <Button icon="checkmark" onPress={() => void save()} disabled={busy}>
                 {busy ? 'Saving…' : editing ? 'Save changes' : 'Save expense'}
               </Button>
-              {editing && (
+              {editing ? (
                 <Button danger icon="trash-outline" onPress={remove} disabled={busy}>
                   Delete expense
                 </Button>
-              )}
+              ) : null}
             </>
           )}
         </ScrollView>
