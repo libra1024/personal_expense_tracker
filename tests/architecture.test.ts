@@ -35,3 +35,17 @@ test('source imports use explicit architectural layer modules', () => {
     assert.equal(existsSync(join(root, legacyFile)), false, `${legacyFile} must not exist`);
   }
 });
+
+/** Ensures reusable presentation primitives are separated into focused UI component modules. */
+test('presentation UI is composed from focused component modules', () => {
+  for (const componentFile of [
+    'src/presentation/components/theme.ts',
+    'src/presentation/components/icon.tsx',
+    'src/presentation/components/layout.tsx',
+    'src/presentation/components/controls.tsx',
+    'src/presentation/components/expense-display.tsx',
+  ]) {
+    assert.equal(existsSync(join(root, componentFile)), true, `${componentFile} must exist`);
+  }
+  assert.equal(existsSync(join(root, 'src/presentation/ui.tsx')), false, 'ui.tsx must be split');
+});

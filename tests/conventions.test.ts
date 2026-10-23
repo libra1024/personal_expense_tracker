@@ -29,5 +29,6 @@ test('CI and local commits enforce Prettier and ESLint', () => {
     printWidth: 100,
     trailingComma: 'all',
     bracketSameLine: false,
+    plugins: ['prettier-plugin-tailwindcss'],
   });
 });

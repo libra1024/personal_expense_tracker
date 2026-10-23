@@ -4,19 +4,15 @@ import { Text, View } from 'react-native';
 import { historicalExpenseMinor } from '../../src/domain/currency';
 import { filterExpenses, formatMoney, monthKey, summarize } from '../../src/domain/expenses';
 import { useExpenses } from '../../src/presentation/expense-provider';
+import { Button, MonthPicker } from '../../src/presentation/components/controls';
 import {
-  Button,
-  Card,
   categoryMeta,
-  colors,
   EmptyState,
   ExpenseRow,
-  Header,
-  Icon,
-  MonthPicker,
-  Screen,
-  styles,
-} from '../../src/presentation/ui';
+} from '../../src/presentation/components/expense-display';
+import { Icon } from '../../src/presentation/components/icon';
+import { Card, Header, Screen } from '../../src/presentation/components/layout';
+import { colors, styles } from '../../src/presentation/components/theme';
 
 export default function Overview() {
   const { expenses, currency, baseCurrency, rateWarning } = useExpenses();

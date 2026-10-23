@@ -27,7 +27,10 @@ import {
 } from '../src/domain/expenses';
 import { useExpenses } from '../src/presentation/expense-provider';
 import { exitExpense } from '../src/navigation';
-import { Button, categoryMeta, colors, Icon, IconButton, styles } from '../src/presentation/ui';
+import { Button, IconButton } from '../src/presentation/components/controls';
+import { categoryMeta } from '../src/presentation/components/expense-display';
+import { Icon } from '../src/presentation/components/icon';
+import { colors, styles } from '../src/presentation/components/theme';
 
 export default function ExpenseForm() {
   const { id: rawId } = useLocalSearchParams<{ id?: string }>();

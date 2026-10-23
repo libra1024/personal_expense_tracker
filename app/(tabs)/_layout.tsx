@@ -1,5 +1,6 @@
 import { Tabs } from 'expo-router';
-import { colors, Icon } from '../../src/presentation/ui';
+import { Icon } from '../../src/presentation/components/icon';
+import { colors } from '../../src/presentation/components/theme';
 
 export default function TabLayout() {
   return (
