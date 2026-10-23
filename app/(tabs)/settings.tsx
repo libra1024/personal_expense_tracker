@@ -2,7 +2,10 @@ import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { CURRENCIES } from '../../src/domain/expenses';
 import { useExpenses } from '../../src/presentation/expense-provider';
-import { Button, Card, colors, Header, Icon, Screen, styles } from '../../src/presentation/ui';
+import { Button } from '../../src/presentation/components/controls';
+import { Icon } from '../../src/presentation/components/icon';
+import { Card, Header, Screen } from '../../src/presentation/components/layout';
+import { colors, styles } from '../../src/presentation/components/theme';
 
 const names = { MXN: 'Mexican peso', USD: 'US dollar', EUR: 'Euro' };
 export default function Settings() {

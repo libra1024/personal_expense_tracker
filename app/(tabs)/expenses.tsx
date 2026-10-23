@@ -11,15 +11,10 @@ import {
   type Category,
 } from '../../src/domain/expenses';
 import { useExpenses } from '../../src/presentation/expense-provider';
-import {
-  Button,
-  colors,
-  EmptyState,
-  ExpenseRow,
-  Header,
-  MonthPicker,
-  styles,
-} from '../../src/presentation/ui';
+import { Button, MonthPicker } from '../../src/presentation/components/controls';
+import { EmptyState, ExpenseRow } from '../../src/presentation/components/expense-display';
+import { Header } from '../../src/presentation/components/layout';
+import { colors, styles } from '../../src/presentation/components/theme';
 
 export default function Expenses() {
   const { expenses, currency, baseCurrency } = useExpenses();
