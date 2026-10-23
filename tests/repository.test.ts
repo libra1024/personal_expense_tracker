@@ -70,6 +70,7 @@ test('freezes legacy base-currency expenses when the first rate cache is saved',
   } finally { db.close(); }
 });
 
+/** Confirms historical conversion snapshots survive the schema migration that adds logical deletion. */
 test('migrates and persists an immutable original-currency rate snapshot', async () => {
   const db = new DatabaseSync(':memory:');
   try {
@@ -81,7 +82,7 @@ test('migrates and persists an immutable original-currency rate snapshot', async
     assert.equal(saved.originalAmountMinor, 8000);
     assert.equal(saved.originalCurrency, 'USD');
     assert.equal(saved.rateSnapshot, snapshot);
-    assert.equal(db.prepare('PRAGMA user_version').get()?.user_version, 3);
+    assert.equal(db.prepare('PRAGMA user_version').get()?.user_version, 4);
   } finally { db.close(); }
 });
 
@@ -99,6 +100,7 @@ test('persists creation and last-modified times for an expense', async () => {
   } finally { db.close(); }
 });
 
+/** Confirms legacy timestamp records gain logical-deletion support without changing their audit times. */
 test('migrates version-two records with their existing creation time as last modified', async () => {
   const db = new DatabaseSync(':memory:');
   try {
@@ -110,7 +112,27 @@ test('migrates version-two records with their existing creation time as last mod
     const [saved] = await repo.list();
     assert.equal(saved.createdAt, '2026-10-21T10:15:00.000Z');
     assert.equal(saved.updatedAt, '2026-10-21T10:15:00.000Z');
-    assert.equal(db.prepare('PRAGMA user_version').get()?.user_version, 3);
+    assert.equal(db.prepare('PRAGMA user_version').get()?.user_version, 4);
+  } finally { db.close(); }
+});
+
+/** Verifies removal preserves an auditable row while hiding it from all active expense operations. */
+test('marks removed expenses as deleted without removing their database records', async () => {
+  const db = new DatabaseSync(':memory:');
+  let now = new Date('2026-10-22T10:15:00.000Z');
+  try {
+    const repo = createRepository(adapter(db), { now: () => now });
+    await repo.initialize();
+    const id = await repo.save(input);
+    now = new Date('2026-10-22T11:45:00.000Z');
+    await repo.remove(id);
+
+    assert.deepEqual(await repo.list(), []);
+    assert.deepEqual(
+      { ...db.prepare('SELECT id, note, deletedAt, updatedAt FROM expenses WHERE id = ?').get(id) },
+      { id, note: input.note, deletedAt: '2026-10-22T11:45:00.000Z', updatedAt: '2026-10-22T11:45:00.000Z' },
+    );
+    await assert.rejects(repo.save({ ...input, note: 'Attempted restore' }, id), /no longer/i);
   } finally { db.close(); }
 });
 
