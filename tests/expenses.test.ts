@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {
   parseAmount, formatMoney, monthKey, shiftMonth, localDate, isValidDate,
   filterExpenses, summarize, groupByDate, validateDraft, timestampLabel,
-} from '../src/expenses.ts';
+} from '../src/domain/expenses.ts';
 
 test('decimal amounts become exact integer cents', () => {
   assert.equal(parseAmount('0.10'), 10);

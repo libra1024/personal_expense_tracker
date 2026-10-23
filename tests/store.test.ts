@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { ExpenseStore } from '../src/store.ts';
+import { ExpenseStore } from '../src/application/expense-store.ts';
 import { createFrankfurterRateProvider } from '../src/infrastructure/frankfurter-rate-provider.ts';
 import { createMockRepository } from './mocks/repository.ts';
 import { sampleExpenses } from './fixtures/expenses.ts';

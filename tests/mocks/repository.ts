@@ -1,6 +1,6 @@
-import type { Currency, Expense } from '../../src/expenses.ts';
-import type { Repository } from '../../src/repository.ts';
-import type { Rate } from '../../src/currency.ts';
+import type { Currency, Expense } from '../../src/domain/expenses.ts';
+import type { Repository } from '../../src/infrastructure/sqlite-expense-repository.ts';
+import type { Rate } from '../../src/domain/currency.ts';
 import { createDemoExpenses } from '../../src/demo-data.ts';
 
 type Operation = keyof Repository;

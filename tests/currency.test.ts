@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createFrankfurterRateProvider } from '../src/infrastructure/frankfurter-rate-provider.ts';
-import * as currency from '../src/currency.ts';
-import type { Rate } from '../src/currency.ts';
+import * as currency from '../src/domain/currency.ts';
+import type { Rate } from '../src/domain/currency.ts';
 
 test('converts from original cents with decimal half-up rounding and detects overflow', () => {
   assert.equal(currency.convertMinor(10000, 0.05407), 541);

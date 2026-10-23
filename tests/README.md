@@ -6,7 +6,7 @@ Ejecuta todas las pruebas con `npm test`. No necesitan Expo Go ni paquetes npm i
 
 ```ts
 import assert from 'node:assert/strict';
-import { ExpenseStore } from '../src/store.ts';
+import { ExpenseStore } from '../src/application/expense-store.ts';
 import { createMockRepository } from './mocks/repository.ts';
 import { sampleExpenses } from './fixtures/expenses.ts';
 

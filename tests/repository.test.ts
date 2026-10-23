@@ -4,7 +4,7 @@ import { DatabaseSync, type SQLInputValue } from 'node:sqlite';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { createRepository, type Database } from '../src/repository.ts';
+import { createRepository, type Database } from '../src/infrastructure/sqlite-expense-repository.ts';
 
 // Execute production SQL against real SQLite; only bridge async Expo methods.
 function adapter(db: DatabaseSync): Database {
