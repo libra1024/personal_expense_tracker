@@ -12,11 +12,13 @@ export interface Database {
 }
 export type Repository = ReturnType<typeof createRepository>;
 
+/** Creates the SQLite adapter that persists active expenses and retains removed records for audit history. */
 export function createRepository(db: Database, options: { demoData?: boolean; now?: () => Date } = {}) {
   return {
+    /** Initializes the schema and applies each idempotent migration in order. */
     async initialize() {
       const version = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
-      if ((version?.user_version ?? 0) > 3) throw new Error('This database was created by a newer app. Update the app to open it.');
+      if ((version?.user_version ?? 0) > 4) throw new Error('This database was created by a newer app. Update the app to open it.');
       await db.execAsync('PRAGMA journal_mode = WAL;');
       if ((version?.user_version ?? 0) === 0) await db.execAsync(`
         BEGIN TRANSACTION;
@@ -30,11 +32,13 @@ export function createRepository(db: Database, options: { demoData?: boolean; no
           originalCurrency TEXT,
           rateSnapshot TEXT,
           createdAt TEXT NOT NULL,
-          updatedAt TEXT NOT NULL
+          updatedAt TEXT NOT NULL,
+          deletedAt TEXT
         );
         CREATE INDEX IF NOT EXISTS expenses_date ON expenses(date DESC);
+        CREATE INDEX IF NOT EXISTS expenses_active_date ON expenses(date DESC, createdAt DESC, id DESC) WHERE deletedAt IS NULL;
         CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT NOT NULL);
-        PRAGMA user_version = 3;
+        PRAGMA user_version = 4;
         COMMIT;
       `).catch(async (error: unknown) => {
         try { await db.execAsync('ROLLBACK;'); } catch { /* Preserve the initialization error. */ }
@@ -61,29 +65,45 @@ export function createRepository(db: Database, options: { demoData?: boolean; no
         try { await db.execAsync('ROLLBACK;'); } catch { /* Preserve the initialization error. */ }
         throw error;
       });
+      if ((version?.user_version ?? 0) > 0 && (version?.user_version ?? 0) <= 3) await db.execAsync(`
+        BEGIN TRANSACTION;
+        ALTER TABLE expenses ADD COLUMN deletedAt TEXT;
+        CREATE INDEX IF NOT EXISTS expenses_active_date ON expenses(date DESC, createdAt DESC, id DESC) WHERE deletedAt IS NULL;
+        PRAGMA user_version = 4;
+        COMMIT;
+      `).catch(async (error: unknown) => {
+        try { await db.execAsync('ROLLBACK;'); } catch { /* Preserve the initialization error. */ }
+        throw error;
+      });
       // One atomic, idempotent migration: never reinterpret amounts after display changes.
       await db.runAsync(`INSERT OR IGNORE INTO settings (key, value)
         SELECT 'baseCurrency', COALESCE((SELECT value FROM settings WHERE key = 'currency' AND value IN ('MXN', 'USD', 'EUR')), 'MXN')`);
       if (options.demoData) await seedDemoData(db, options.now?.() ?? new Date());
     },
+    /** Lists only active expenses; logically deleted records remain in SQLite for audit history. */
     async list(): Promise<Expense[]> {
-      return db.getAllAsync<Expense>('SELECT * FROM expenses ORDER BY date DESC, createdAt DESC, id DESC');
+      return db.getAllAsync<Expense>('SELECT * FROM expenses WHERE deletedAt IS NULL ORDER BY date DESC, createdAt DESC, id DESC');
     },
     async loadDemoData(): Promise<Expense[]> {
       return seedDemoData(db, options.now?.() ?? new Date(), true);
     },
+    /** Creates an expense or updates an active one without permitting a logical deletion to be overwritten. */
     async save(input: ExpenseInput, id?: number): Promise<number> {
       const item = validateInput(input);
       const timestamp = (options.now?.() ?? new Date()).toISOString();
       if (id !== undefined) {
-        const result = await db.runAsync('UPDATE expenses SET amountMinor = ?, category = ?, date = ?, note = ?, originalAmountMinor = ?, originalCurrency = ?, rateSnapshot = ?, updatedAt = ? WHERE id = ?', item.amountMinor, item.category, item.date, item.note, item.originalAmountMinor ?? null, item.originalCurrency ?? null, item.rateSnapshot ?? null, timestamp, id);
+        const result = await db.runAsync('UPDATE expenses SET amountMinor = ?, category = ?, date = ?, note = ?, originalAmountMinor = ?, originalCurrency = ?, rateSnapshot = ?, updatedAt = ? WHERE id = ? AND deletedAt IS NULL', item.amountMinor, item.category, item.date, item.note, item.originalAmountMinor ?? null, item.originalCurrency ?? null, item.rateSnapshot ?? null, timestamp, id);
         if (!result.changes) throw new Error('This expense no longer exists.');
         return id;
       }
       const result = await db.runAsync('INSERT INTO expenses (amountMinor, category, date, note, originalAmountMinor, originalCurrency, rateSnapshot, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)', item.amountMinor, item.category, item.date, item.note, item.originalAmountMinor ?? null, item.originalCurrency ?? null, item.rateSnapshot ?? null, timestamp, timestamp);
       return result.lastInsertRowId;
     },
-    async remove(id: number) { await db.runAsync('DELETE FROM expenses WHERE id = ?', id); },
+    /** Marks an active expense as deleted while retaining its persisted values and audit timestamp. */
+    async remove(id: number) {
+      const timestamp = (options.now?.() ?? new Date()).toISOString();
+      await db.runAsync('UPDATE expenses SET deletedAt = ?, updatedAt = ? WHERE id = ? AND deletedAt IS NULL', timestamp, timestamp, id);
+    },
     async getBaseCurrency(): Promise<Currency> {
       const setting = await db.getFirstAsync<{ value: string }>("SELECT value FROM settings WHERE key = 'baseCurrency'");
       if (!CURRENCIES.includes(setting?.value as Currency)) throw new Error('Unable to read the original currency.');
@@ -122,12 +142,13 @@ export function createRepository(db: Database, options: { demoData?: boolean; no
   };
 }
 
+/** Adds sample records only when no active expenses exist, retaining logically deleted records intact. */
 async function seedDemoData(db: Database, today: Date, explicit = false): Promise<Expense[]> {
   await db.execAsync('BEGIN IMMEDIATE;');
   try {
     const marker = await db.getFirstAsync<{ value: string }>("SELECT value FROM settings WHERE key = 'demo_seeded'");
     if (explicit || !marker) {
-      const count = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) AS count FROM expenses');
+      const count = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) AS count FROM expenses WHERE deletedAt IS NULL');
       if (explicit && count?.count !== 0) throw new Error('Your expense list must be empty before loading sample expenses.');
       if (count?.count === 0) {
         for (const input of createDemoExpenses(today)) {
@@ -137,7 +158,7 @@ async function seedDemoData(db: Database, today: Date, explicit = false): Promis
       // Record the decision even for a populated database, so deleting user data cannot trigger samples later.
       await db.runAsync("INSERT INTO settings (key, value) VALUES ('demo_seeded', '1') ON CONFLICT(key) DO UPDATE SET value = excluded.value");
     }
-    const expenses = await db.getAllAsync<Expense>('SELECT * FROM expenses ORDER BY date DESC, createdAt DESC, id DESC');
+    const expenses = await db.getAllAsync<Expense>('SELECT * FROM expenses WHERE deletedAt IS NULL ORDER BY date DESC, createdAt DESC, id DESC');
     await db.execAsync('COMMIT;');
     return expenses;
   } catch (error) {
