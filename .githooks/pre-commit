@@ -1,0 +1,3 @@
+#!/usr/bin/env sh
+# Rejects local commits whose tracked source fails the repository ESLint configuration.
+npm run lint
