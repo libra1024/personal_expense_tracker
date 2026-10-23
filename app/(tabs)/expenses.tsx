@@ -5,7 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { filterExpenses, groupByDate, monthKey, type Category } from '../../src/domain/expenses';
 import { Button, MonthPicker } from '../../src/presentation/components/controls';
 import { EmptyState } from '../../src/presentation/components/expense-display';
-import { CategoryFilter, DailyExpenseGroup } from '../../src/presentation/components/expense-list';
+import { CategoryFilter } from '../../src/presentation/components/history/category-filter';
+import { DailyExpenseGroup } from '../../src/presentation/components/history/daily-expense-group';
 import { Header } from '../../src/presentation/components/layout';
 import { useExpenses } from '../../src/presentation/expense-provider';
 

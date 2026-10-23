@@ -37,3 +37,11 @@ await saving;
 The `failNext` and `pauseNext` controls accept `initialize`, `list`, `getCurrency`, `setCurrency`, `save`, `remove`, and `loadDemoData`. The `now: () => '2026-10-21T12:00:00Z'` option fixes creation times for deterministic results.
 
 The tests verify store behavior: recovery, data preservation, delayed saves, and duplicate prevention. Repository integration tests continue to use real SQLite to verify queries, migrations, and persistence.
+
+## Presentation coverage
+
+- `expense-editor-model.test.ts` exercises new and saved drafts, exact cents, unsaved changes, offline saves, currency conversion, and validation failures without React Native.
+- `expense-editor-architecture.test.ts` keeps state orchestration in the hook, the draft adapter independent of native APIs, and calendar rendering inside the date field.
+- `presentation-architecture.test.ts` checks dedicated feature component modules and rejects imports of the removed aggregate UI files.
+
+These tests do not simulate native gestures or render a device UI. Android and iOS Expo exports verify bundling; visual and native-interaction testing still requires a device or simulator.

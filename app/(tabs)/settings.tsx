@@ -1,9 +1,7 @@
 import { Text } from 'react-native';
-import {
-  CurrencySettingsPanel,
-  PrivacyPanel,
-  SampleDataPanel,
-} from '../../src/presentation/components/settings-panels';
+import { CurrencySettingsPanel } from '../../src/presentation/components/settings/currency-settings-panel';
+import { PrivacyPanel } from '../../src/presentation/components/settings/privacy-panel';
+import { SampleDataPanel } from '../../src/presentation/components/settings/sample-data-panel';
 import { Header, Screen } from '../../src/presentation/components/layout';
 import { useExpenses } from '../../src/presentation/expense-provider';
 

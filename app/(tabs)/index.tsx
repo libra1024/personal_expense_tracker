@@ -7,12 +7,10 @@ import { Button, MonthPicker } from '../../src/presentation/components/controls'
 import { EmptyState } from '../../src/presentation/components/expense-display';
 import { Icon } from '../../src/presentation/components/icon';
 import { Header, Screen } from '../../src/presentation/components/layout';
-import {
-  CategoryBreakdown,
-  DevicePrivacyNote,
-  MonthlyTotalCard,
-  RecentExpenses,
-} from '../../src/presentation/components/overview-summary';
+import { CategoryBreakdown } from '../../src/presentation/components/overview/category-breakdown';
+import { DevicePrivacyNote } from '../../src/presentation/components/overview/device-privacy-note';
+import { MonthlyTotalCard } from '../../src/presentation/components/overview/monthly-total-card';
+import { RecentExpenses } from '../../src/presentation/components/overview/recent-expenses';
 import { useExpenses } from '../../src/presentation/expense-provider';
 
 /** Shows the selected month’s totals, category distribution, and recent activity. */

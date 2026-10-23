@@ -30,6 +30,22 @@ rewrite historical records.
 Domain code cannot import inward-facing infrastructure or presentation code.
 Infrastructure is composed at the application boundary by the native provider.
 
+## Presentation structure
+
+- Feature components live under `src/presentation/components/expense-form`,
+  `history`, `overview`, and `settings`. Each module exports one focused component;
+  callers import it directly rather than through a screen-wide aggregate file.
+- Shared layout, controls, icons, and expense rows remain reusable primitives.
+  Static styling uses Tailwind classes; calculated widths and runtime category
+  colors may use native style values.
+- `app/expense.tsx` composes controlled inputs and connects navigation.
+  `hooks/use-expense-editor.ts` owns draft state, confirmation dialogs, hardware
+  back handling, and calls to the application store.
+- `expense-editor-model.ts` is a pure presentation adapter for draft initialization,
+  change detection, and validated store input. Money parsing, conversion, and
+  validation remain delegated to the domain. The native date picker and its
+  visibility state belong to `expense-form/date-field.tsx`.
+
 ## Offline-first rules
 
 1. Expense mutations commit to SQLite before presentation state changes.
