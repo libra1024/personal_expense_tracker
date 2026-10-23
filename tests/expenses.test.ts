@@ -68,3 +68,13 @@ test('draft validation requires a known category and a real date, trims notes', 
   assert.throws(() => validateDraft({ amount: '1', category: '', date: '2026-10-21', note: '' }), /category/i);
   assert.throws(() => validateDraft({ amount: '1', category: 'Other', date: '2026-02-30', note: '' }), /date/i);
 });
+
+/** Confirms the additional everyday spending categories can be saved through the same validated draft path. */
+test('draft validation accepts expanded expense categories', () => {
+  for (const category of ['Housing', 'Insurance', 'Education', 'Personal Care', 'Subscriptions', 'Pets', 'Gifts & Donations', 'Taxes & Fees', 'Childcare', 'Business']) {
+    assert.equal(
+      validateDraft({ amount: '1', category, date: '2026-10-21', note: '' }).category,
+      category,
+    );
+  }
+});
