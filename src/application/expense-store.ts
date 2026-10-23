@@ -1,23 +1,49 @@
-import type { Currency, Expense, ExpenseInput } from '../domain/expenses.ts';
-import { validateInput } from '../domain/expenses.ts';
-import { type Rate } from '../domain/currency.ts';
-import type { ExchangeRateProvider } from './exchange-rate-provider.ts';
-import type { ExpenseRepository } from './expense-repository.ts';
+import type { Currency, Expense, ExpenseInput } from "../domain/expenses.ts";
+import { validateInput } from "../domain/expenses.ts";
+import { type Rate } from "../domain/currency.ts";
+import type { ExchangeRateProvider } from "./exchange-rate-provider.ts";
+import type { ExpenseRepository } from "./expense-repository.ts";
 
-type Snapshot = { baseCurrency: Currency; rates: Rate[] | null; refreshingRates: boolean; rateWarning: string | null; expenses: Expense[]; currency: Currency; ready: boolean; loading: boolean; busy: boolean; error: string | null };
+type Snapshot = {
+  baseCurrency: Currency;
+  rates: Rate[] | null;
+  refreshingRates: boolean;
+  rateWarning: string | null;
+  expenses: Expense[];
+  currency: Currency;
+  ready: boolean;
+  loading: boolean;
+  busy: boolean;
+  error: string | null;
+};
 
 /** Coordinates offline expense use cases and optional rate-cache refreshes through application ports. */
 export class ExpenseStore {
   private repository: ExpenseRepository;
   private rateProvider: ExchangeRateProvider;
   private listeners = new Set<() => void>();
-  private state: Snapshot = { baseCurrency: 'MXN', rates: null, refreshingRates: false, rateWarning: null, expenses: [], currency: 'MXN', ready: false, loading: false, busy: false, error: null };
+  private state: Snapshot = {
+    baseCurrency: "MXN",
+    rates: null,
+    refreshingRates: false,
+    rateWarning: null,
+    expenses: [],
+    currency: "MXN",
+    ready: false,
+    loading: false,
+    busy: false,
+    error: null,
+  };
 
   private now: () => number;
   private lastAttempt = -Infinity;
   private refresh: Promise<void> | undefined;
   /** Creates a store with local persistence and a replaceable exchange-rate provider. */
-  constructor(repository: ExpenseRepository, rateProvider: ExchangeRateProvider, options: { now?: () => number } = {}) {
+  constructor(
+    repository: ExpenseRepository,
+    rateProvider: ExchangeRateProvider,
+    options: { now?: () => number } = {},
+  ) {
     this.repository = repository;
     this.rateProvider = rateProvider;
     this.now = options.now ?? Date.now;
@@ -25,11 +51,13 @@ export class ExpenseStore {
   getSnapshot = (): Snapshot => this.state;
   subscribe = (listener: () => void) => {
     this.listeners.add(listener);
-    return () => { this.listeners.delete(listener); };
+    return () => {
+      this.listeners.delete(listener);
+    };
   };
   private patch(update: Partial<Snapshot>) {
     this.state = { ...this.state, ...update };
-    this.listeners.forEach(listener => listener());
+    this.listeners.forEach((listener) => listener());
   }
   async initialize() {
     if (this.state.loading || this.state.ready) return;
@@ -43,23 +71,36 @@ export class ExpenseStore {
       this.patch({ expenses, currency, baseCurrency, rates, ready: true });
       void this.refreshRates();
     } catch (error) {
-      this.patch({ error: error instanceof Error ? error.message : 'Unable to open your expenses.' });
-    } finally { this.patch({ loading: false }); }
+      this.patch({
+        error:
+          error instanceof Error
+            ? error.message
+            : "Unable to open your expenses.",
+      });
+    } finally {
+      this.patch({ loading: false });
+    }
   }
   /** Refreshes cached rates without preventing the local store from remaining usable offline. */
   refreshRates(force = false): Promise<void> {
     if (this.refresh) return this.refresh;
-    if (!this.state.ready || (!force && this.now() - this.lastAttempt < 300000)) return Promise.resolve();
+    if (!this.state.ready || (!force && this.now() - this.lastAttempt < 300000))
+      return Promise.resolve();
     this.lastAttempt = this.now();
     this.patch({ refreshingRates: true });
     this.refresh = (async () => {
       try {
-        const rates = await this.rateProvider.fetchRates(this.state.baseCurrency);
+        const rates = await this.rateProvider.fetchRates(
+          this.state.baseCurrency,
+        );
         await this.repository.setRateCache(rates);
         const expenses = await this.repository.list();
         this.patch({ rates, expenses, rateWarning: null });
       } catch {
-        this.patch({ rateWarning: 'Could not refresh rates. Saved rates may be out of date.' });
+        this.patch({
+          rateWarning:
+            "Could not refresh rates. Saved rates may be out of date.",
+        });
       } finally {
         this.patch({ refreshingRates: false });
         this.refresh = undefined;
@@ -70,14 +111,19 @@ export class ExpenseStore {
   private async mutate(action: () => Promise<void>): Promise<boolean> {
     if (this.state.busy || !this.state.ready) return false;
     this.patch({ busy: true });
-    try { await action(); return true; }
-    finally { this.patch({ busy: false }); }
+    try {
+      await action();
+      return true;
+    } finally {
+      this.patch({ busy: false });
+    }
   }
   save(input: ExpenseInput, id?: number) {
     return this.mutate(async () => {
       const normalized = validateInput(input);
-      const original = this.state.expenses.find(e => e.id === id);
-      if (id !== undefined && !original) throw new Error('This expense no longer exists.');
+      const original = this.state.expenses.find((e) => e.id === id);
+      if (id !== undefined && !original)
+        throw new Error("This expense no longer exists.");
       await this.repository.save(normalized, id);
       const expenses = await this.repository.list();
       // Update from the committed write so creation and modification timestamps come from SQLite.
@@ -87,7 +133,7 @@ export class ExpenseStore {
   remove(id: number) {
     return this.mutate(async () => {
       await this.repository.remove(id);
-      this.patch({ expenses: this.state.expenses.filter(e => e.id !== id) });
+      this.patch({ expenses: this.state.expenses.filter((e) => e.id !== id) });
     });
   }
   loadDemoData() {
