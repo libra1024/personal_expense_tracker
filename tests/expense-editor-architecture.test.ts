@@ -37,6 +37,8 @@ test('editor hook composes the provider and pure draft model without constructin
   assert.match(hook, /hasExpenseDraftChanges/);
   assert.doesNotMatch(hook, /infrastructure\/|expo-sqlite|\bfetch\s*\(/);
   const model = readProjectFile('src/presentation/expense-editor-model.ts');
+  assert.match(model, /\btype Draft[,\s]/);
+  assert.match(model, /ExpenseEditorDraft = Draft &/);
   assert.doesNotMatch(model, /from ['"](?:react|expo-|\.\/expense-provider|.*infrastructure\/)/);
 });
 
