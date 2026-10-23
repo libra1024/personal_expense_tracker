@@ -1,30 +1,18 @@
-import {
-  CURRENCIES,
-  isValidDate,
-  type Currency,
-  type Expense,
-} from "./expenses.ts";
+import { CURRENCIES, isValidDate, type Currency, type Expense } from './expenses.ts';
 
 // Interpret the API's decimal rate exactly, including exponent notation. Never
 // multiply cents with binary floating point or convert an already converted value.
 export function convertMinor(minor: number, rate: number): number {
-  if (
-    !Number.isSafeInteger(minor) ||
-    minor < 0 ||
-    !Number.isFinite(rate) ||
-    rate <= 0
-  )
-    throw new Error("Invalid conversion.");
-  const [coefficient, exponent = "0"] = rate.toString().split("e");
-  const [whole, fraction = ""] = coefficient.split(".");
+  if (!Number.isSafeInteger(minor) || minor < 0 || !Number.isFinite(rate) || rate <= 0)
+    throw new Error('Invalid conversion.');
+  const [coefficient, exponent = '0'] = rate.toString().split('e');
+  const [whole, fraction = ''] = coefficient.split('.');
   const scale = fraction.length - Number(exponent);
-  const numerator =
-    BigInt(whole + fraction) * 10n ** BigInt(Math.max(0, -scale));
+  const numerator = BigInt(whole + fraction) * 10n ** BigInt(Math.max(0, -scale));
   const denominator = 10n ** BigInt(Math.max(0, scale));
-  const rounded =
-    (BigInt(minor) * numerator * 2n + denominator) / (denominator * 2n);
+  const rounded = (BigInt(minor) * numerator * 2n + denominator) / (denominator * 2n);
   if (rounded > BigInt(Number.MAX_SAFE_INTEGER))
-    throw new Error("Converted amount is too large to display accurately.");
+    throw new Error('Converted amount is too large to display accurately.');
   return Number(rounded);
 }
 
@@ -35,9 +23,7 @@ export function displayMinor(
   rates: readonly Rate[] | null,
 ): number | null {
   if (base === target) return minor;
-  const rate = rates?.find(
-    (item) => item.base === base && item.quote === target,
-  )?.rate;
+  const rate = rates?.find((item) => item.base === base && item.quote === target)?.rate;
   return rate ? convertMinor(minor, rate) : null;
 }
 
@@ -48,9 +34,7 @@ export function toBaseMinor(
   rates: readonly Rate[] | null,
 ): number | null {
   if (original === base) return minor;
-  const rate = rates?.find(
-    (item) => item.base === base && item.quote === original,
-  )?.rate;
+  const rate = rates?.find((item) => item.base === base && item.quote === original)?.rate;
   return rate ? convertMinor(minor, 1 / rate) : null;
 }
 
@@ -66,15 +50,12 @@ export function displayHistoricalMinor(
 export function historicalExpenseMinor(
   expense: Pick<
     Expense,
-    "amountMinor" | "originalAmountMinor" | "originalCurrency" | "rateSnapshot"
+    'amountMinor' | 'originalAmountMinor' | 'originalCurrency' | 'rateSnapshot'
   >,
   base: Currency,
   target: Currency,
 ): number | null {
-  if (
-    expense.originalCurrency === target &&
-    expense.originalAmountMinor != null
-  )
+  if (expense.originalCurrency === target && expense.originalAmountMinor != null)
     return expense.originalAmountMinor;
   if (target === base) return expense.amountMinor;
   if (!expense.rateSnapshot) return null;
@@ -99,7 +80,7 @@ export type Rate = {
 export function validateRates(value: unknown, base: Currency): Rate[] {
   const quotes = CURRENCIES.filter((c) => c !== base);
   if (!Array.isArray(value) || value.length !== quotes.length)
-    throw new Error("Incomplete exchange rates.");
+    throw new Error('Incomplete exchange rates.');
   const seen = new Set<string>();
   return value.map((row) => {
     if (
@@ -107,13 +88,13 @@ export function validateRates(value: unknown, base: Currency): Rate[] {
       row.base !== base ||
       !quotes.includes(row.quote) ||
       seen.has(row.quote) ||
-      typeof row.rate !== "number" ||
+      typeof row.rate !== 'number' ||
       !Number.isFinite(row.rate) ||
       row.rate <= 0 ||
-      typeof row.date !== "string" ||
+      typeof row.date !== 'string' ||
       !isValidDate(row.date)
     )
-      throw new Error("Invalid exchange rates.");
+      throw new Error('Invalid exchange rates.');
     seen.add(row.quote);
     return { date: row.date, base, quote: row.quote, rate: row.rate };
   });

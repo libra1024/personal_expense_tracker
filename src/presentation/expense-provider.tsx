@@ -5,18 +5,18 @@ import {
   useState,
   useSyncExternalStore,
   type ReactNode,
-} from "react";
-import { openDatabaseAsync } from "expo-sqlite";
-import { createFrankfurterRateProvider } from "../infrastructure/frankfurter-rate-provider.ts";
-import { createRepository } from "../infrastructure/sqlite-expense-repository.ts";
-import type { ExpenseRepository } from "../application/expense-repository.ts";
-import { ExpenseStore } from "../application/expense-store.ts";
+} from 'react';
+import { openDatabaseAsync } from 'expo-sqlite';
+import { createFrankfurterRateProvider } from '../infrastructure/frankfurter-rate-provider.ts';
+import { createRepository } from '../infrastructure/sqlite-expense-repository.ts';
+import type { ExpenseRepository } from '../application/expense-repository.ts';
+import { ExpenseStore } from '../application/expense-store.ts';
 
 /** Creates a lazy Expo SQLite adapter so presentation composes infrastructure without exposing it to screens. */
 function nativeRepository(): ExpenseRepository {
   let connection: Promise<ExpenseRepository> | undefined;
   const get = () =>
-    (connection ??= openDatabaseAsync("pocket-expenses.db")
+    (connection ??= openDatabaseAsync('pocket-expenses.db')
       .then((db) => createRepository(db, { demoData: true }))
       .catch((error) => {
         connection = undefined;
@@ -45,17 +45,11 @@ export function ExpenseProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     void store.initialize();
   }, [store]);
-  return (
-    <StoreContext.Provider value={store}>{children}</StoreContext.Provider>
-  );
+  return <StoreContext.Provider value={store}>{children}</StoreContext.Provider>;
 }
 export function useExpenses() {
   const store = useContext(StoreContext);
-  if (!store) throw new Error("ExpenseProvider is required.");
-  const state = useSyncExternalStore(
-    store.subscribe,
-    store.getSnapshot,
-    store.getSnapshot,
-  );
+  if (!store) throw new Error('ExpenseProvider is required.');
+  const state = useSyncExternalStore(store.subscribe, store.getSnapshot, store.getSnapshot);
   return { ...state, store };
 }

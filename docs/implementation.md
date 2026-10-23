@@ -3,6 +3,7 @@
 Approved design: personal spending; device-only storage; Android and iOS; Overview, Expenses, and Settings tabs; an add/edit expense modal; monthly totals and category bars; fixed categories; month/category history filters; MXN/USD/EUR display currency; light theme and teal accents.
 
 Implementation tasks:
+
 - [x] Scaffold Expo SDK 57, Router, TypeScript, and local SQLite repository.
 - [x] Implement amount/date validation and tested expense CRUD.
 - [x] Implement tabs, add/edit form, delete confirmation, summaries, and settings.

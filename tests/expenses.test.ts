@@ -1,8 +1,17 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  parseAmount, formatMoney, monthKey, shiftMonth, localDate, isValidDate,
-  filterExpenses, summarize, groupByDate, validateDraft, timestampLabel,
+  parseAmount,
+  formatMoney,
+  monthKey,
+  shiftMonth,
+  localDate,
+  isValidDate,
+  filterExpenses,
+  summarize,
+  groupByDate,
+  validateDraft,
+  timestampLabel,
 } from '../src/domain/expenses.ts';
 
 test('decimal amounts become exact integer cents', () => {
@@ -13,7 +22,18 @@ test('decimal amounts become exact integer cents', () => {
 });
 
 test('rejects invalid, zero, negative, and unsafe amounts', () => {
-  for (const input of ['', '0', '0.00', '-1', '1.001', '1e3', '12abc', '1,000.00', 'Infinity', '90071992547409.92']) {
+  for (const input of [
+    '',
+    '0',
+    '0.00',
+    '-1',
+    '1.001',
+    '1e3',
+    '12abc',
+    '1,000.00',
+    'Infinity',
+    '90071992547409.92',
+  ]) {
     assert.throws(() => parseAmount(input), Error, input);
   }
 });
@@ -35,20 +55,56 @@ test('calendar dates and month navigation do not use UTC or overflow at month en
 });
 
 test('formats timestamps with the record date and hour', () => {
-  assert.equal(timestampLabel('2026-10-22T11:45:00.000Z', 'en-US', 'UTC'), 'Oct 22, 2026, 11:45 AM');
+  assert.equal(
+    timestampLabel('2026-10-22T11:45:00.000Z', 'en-US', 'UTC'),
+    'Oct 22, 2026, 11:45 AM',
+  );
   assert.equal(timestampLabel('not-a-date', 'en-US', 'UTC'), 'Unknown time');
 });
 
 const expenses = [
-  { id: 1, amountMinor: 10, category: 'Groceries', date: '2026-02-28', note: '', createdAt: '2026-02-28T00:00:00Z', updatedAt: '2026-02-28T00:00:00Z' },
-  { id: 2, amountMinor: 20, category: 'Groceries', date: '2026-03-01', note: '', createdAt: '2026-03-01T00:00:00Z', updatedAt: '2026-03-01T00:00:00Z' },
-  { id: 3, amountMinor: 30, category: 'Transport', date: '2026-03-01', note: '', createdAt: '2026-03-01T00:01:00Z', updatedAt: '2026-03-01T00:01:00Z' },
+  {
+    id: 1,
+    amountMinor: 10,
+    category: 'Groceries',
+    date: '2026-02-28',
+    note: '',
+    createdAt: '2026-02-28T00:00:00Z',
+    updatedAt: '2026-02-28T00:00:00Z',
+  },
+  {
+    id: 2,
+    amountMinor: 20,
+    category: 'Groceries',
+    date: '2026-03-01',
+    note: '',
+    createdAt: '2026-03-01T00:00:00Z',
+    updatedAt: '2026-03-01T00:00:00Z',
+  },
+  {
+    id: 3,
+    amountMinor: 30,
+    category: 'Transport',
+    date: '2026-03-01',
+    note: '',
+    createdAt: '2026-03-01T00:01:00Z',
+    updatedAt: '2026-03-01T00:01:00Z',
+  },
 ] as const;
 
 test('filters by calendar month and category and orders newest first', () => {
-  assert.deepEqual(filterExpenses(expenses, '2026-03').map(e => e.id), [3, 2]);
-  assert.deepEqual(filterExpenses(expenses, '2026-03', 'Groceries').map(e => e.id), [2]);
-  assert.deepEqual(groupByDate(filterExpenses(expenses, '2026-03')).map(g => [g.date, g.expenses.length]), [['2026-03-01', 2]]);
+  assert.deepEqual(
+    filterExpenses(expenses, '2026-03').map((e) => e.id),
+    [3, 2],
+  );
+  assert.deepEqual(
+    filterExpenses(expenses, '2026-03', 'Groceries').map((e) => e.id),
+    [2],
+  );
+  assert.deepEqual(
+    groupByDate(filterExpenses(expenses, '2026-03')).map((g) => [g.date, g.expenses.length]),
+    [['2026-03-01', 2]],
+  );
   assert.equal(expenses[0].id, 1);
 });
 
@@ -56,22 +112,51 @@ test('summaries use exact cents, sort categories, and handle no expenses', () =>
   const result = summarize(filterExpenses(expenses, '2026-03'));
   assert.equal(result.totalMinor, 50);
   assert.equal(result.count, 2);
-  assert.deepEqual(result.categories, [{ category: 'Transport', totalMinor: 30 }, { category: 'Groceries', totalMinor: 20 }]);
+  assert.deepEqual(result.categories, [
+    { category: 'Transport', totalMinor: 30 },
+    { category: 'Groceries', totalMinor: 20 },
+  ]);
   assert.deepEqual(summarize([]), { totalMinor: 0, count: 0, categories: [] });
-  assert.throws(() => summarize([{ ...expenses[0], amountMinor: Number.MAX_SAFE_INTEGER }, expenses[1]]), /large/i);
+  assert.throws(
+    () => summarize([{ ...expenses[0], amountMinor: Number.MAX_SAFE_INTEGER }, expenses[1]]),
+    /large/i,
+  );
 });
 
 test('draft validation requires a known category and a real date, trims notes', () => {
-  assert.deepEqual(validateDraft({ amount: '12.34', category: 'Groceries', date: '2026-10-21', note: ' bread ' }), {
-    amountMinor: 1234, category: 'Groceries', date: '2026-10-21', note: 'bread',
-  });
-  assert.throws(() => validateDraft({ amount: '1', category: '', date: '2026-10-21', note: '' }), /category/i);
-  assert.throws(() => validateDraft({ amount: '1', category: 'Other', date: '2026-02-30', note: '' }), /date/i);
+  assert.deepEqual(
+    validateDraft({ amount: '12.34', category: 'Groceries', date: '2026-10-21', note: ' bread ' }),
+    {
+      amountMinor: 1234,
+      category: 'Groceries',
+      date: '2026-10-21',
+      note: 'bread',
+    },
+  );
+  assert.throws(
+    () => validateDraft({ amount: '1', category: '', date: '2026-10-21', note: '' }),
+    /category/i,
+  );
+  assert.throws(
+    () => validateDraft({ amount: '1', category: 'Other', date: '2026-02-30', note: '' }),
+    /date/i,
+  );
 });
 
 /** Confirms the additional everyday spending categories can be saved through the same validated draft path. */
 test('draft validation accepts expanded expense categories', () => {
-  for (const category of ['Housing', 'Insurance', 'Education', 'Personal Care', 'Subscriptions', 'Pets', 'Gifts & Donations', 'Taxes & Fees', 'Childcare', 'Business']) {
+  for (const category of [
+    'Housing',
+    'Insurance',
+    'Education',
+    'Personal Care',
+    'Subscriptions',
+    'Pets',
+    'Gifts & Donations',
+    'Taxes & Fees',
+    'Childcare',
+    'Business',
+  ]) {
     assert.equal(
       validateDraft({ amount: '1', category, date: '2026-10-21', note: '' }).category,
       category,

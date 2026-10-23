@@ -1,5 +1,5 @@
-import type { Rate } from "../domain/currency.ts";
-import type { Currency, Expense, ExpenseInput } from "../domain/expenses.ts";
+import type { Rate } from '../domain/currency.ts';
+import type { Currency, Expense, ExpenseInput } from '../domain/expenses.ts';
 
 /** Application boundary for local expense persistence. */
 export interface ExpenseRepository {

@@ -15,13 +15,23 @@ test('domain rules stay independent from UI, Expo, SQLite, and network adapters'
 
 test('application state depends on contracts instead of Expo UI APIs', () => {
   const source = read('src/application/expense-store.ts');
-  assert.doesNotMatch(source, /infrastructure\/|expo-|react-native|react['"]|typeof fetch|\bfetch\s*\(/);
+  assert.doesNotMatch(
+    source,
+    /infrastructure\/|expo-|react-native|react['"]|typeof fetch|\bfetch\s*\(/,
+  );
   assert.match(source, /ExchangeRateProvider/);
 });
 
 /** Prevents the former root-level compatibility modules from bypassing architectural layer boundaries. */
 test('source imports use explicit architectural layer modules', () => {
-  for (const legacyFile of ['src/store.ts', 'src/repository.ts', 'src/currency.ts', 'src/expenses.ts', 'src/provider.tsx', 'src/ui.tsx']) {
+  for (const legacyFile of [
+    'src/store.ts',
+    'src/repository.ts',
+    'src/currency.ts',
+    'src/expenses.ts',
+    'src/provider.tsx',
+    'src/ui.tsx',
+  ]) {
     assert.equal(existsSync(join(root, legacyFile)), false, `${legacyFile} must not exist`);
   }
 });

@@ -1,8 +1,8 @@
-import type { Currency, Expense, ExpenseInput } from "../domain/expenses.ts";
-import { validateInput } from "../domain/expenses.ts";
-import { type Rate } from "../domain/currency.ts";
-import type { ExchangeRateProvider } from "./exchange-rate-provider.ts";
-import type { ExpenseRepository } from "./expense-repository.ts";
+import type { Currency, Expense, ExpenseInput } from '../domain/expenses.ts';
+import { validateInput } from '../domain/expenses.ts';
+import { type Rate } from '../domain/currency.ts';
+import type { ExchangeRateProvider } from './exchange-rate-provider.ts';
+import type { ExpenseRepository } from './expense-repository.ts';
 
 type Snapshot = {
   baseCurrency: Currency;
@@ -23,12 +23,12 @@ export class ExpenseStore {
   private rateProvider: ExchangeRateProvider;
   private listeners = new Set<() => void>();
   private state: Snapshot = {
-    baseCurrency: "MXN",
+    baseCurrency: 'MXN',
     rates: null,
     refreshingRates: false,
     rateWarning: null,
     expenses: [],
-    currency: "MXN",
+    currency: 'MXN',
     ready: false,
     loading: false,
     busy: false,
@@ -72,10 +72,7 @@ export class ExpenseStore {
       void this.refreshRates();
     } catch (error) {
       this.patch({
-        error:
-          error instanceof Error
-            ? error.message
-            : "Unable to open your expenses.",
+        error: error instanceof Error ? error.message : 'Unable to open your expenses.',
       });
     } finally {
       this.patch({ loading: false });
@@ -90,16 +87,13 @@ export class ExpenseStore {
     this.patch({ refreshingRates: true });
     this.refresh = (async () => {
       try {
-        const rates = await this.rateProvider.fetchRates(
-          this.state.baseCurrency,
-        );
+        const rates = await this.rateProvider.fetchRates(this.state.baseCurrency);
         await this.repository.setRateCache(rates);
         const expenses = await this.repository.list();
         this.patch({ rates, expenses, rateWarning: null });
       } catch {
         this.patch({
-          rateWarning:
-            "Could not refresh rates. Saved rates may be out of date.",
+          rateWarning: 'Could not refresh rates. Saved rates may be out of date.',
         });
       } finally {
         this.patch({ refreshingRates: false });
@@ -122,8 +116,7 @@ export class ExpenseStore {
     return this.mutate(async () => {
       const normalized = validateInput(input);
       const original = this.state.expenses.find((e) => e.id === id);
-      if (id !== undefined && !original)
-        throw new Error("This expense no longer exists.");
+      if (id !== undefined && !original) throw new Error('This expense no longer exists.');
       await this.repository.save(normalized, id);
       const expenses = await this.repository.list();
       // Update from the committed write so creation and modification timestamps come from SQLite.

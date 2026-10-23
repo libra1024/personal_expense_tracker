@@ -1,3 +1,4 @@
 #!/usr/bin/env sh
-# Rejects local commits whose tracked source fails the repository ESLint configuration.
+# Rejects local commits whose tracked source fails the repository formatting or ESLint configuration.
+npm run format:check
 npm run lint
