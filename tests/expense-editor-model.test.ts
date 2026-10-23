@@ -2,8 +2,11 @@ import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import type { Expense } from '../src/domain/expenses.ts';
 
-/** Defines the pure draft adapter contract without importing React or native APIs. */
-const loadEditorModel = () => import('../src/presentation/expense-editor-model.ts');
+import {
+  createExpenseEditorDraft,
+  hasExpenseDraftChanges,
+  buildExpenseInput,
+} from '../src/presentation/expense-editor-model.ts';
 
 /** Builds a minimal saved expense with explicit overrides for editor characterization. */
 function savedExpense(overrides: Partial<Expense> = {}): Expense {
@@ -20,8 +23,7 @@ function savedExpense(overrides: Partial<Expense> = {}): Expense {
 }
 
 /** Preserves the empty new-expense defaults and a caller-supplied local calendar date. */
-test('editor initializes a new draft in the storage currency', async () => {
-  const { createExpenseEditorDraft } = await loadEditorModel();
+test('editor initializes a new draft in the storage currency', () => {
   assert.deepEqual(createExpenseEditorDraft(undefined, 'MXN', '2026-01-15'), {
     amount: '',
     transactionCurrency: 'MXN',
@@ -32,8 +34,7 @@ test('editor initializes a new draft in the storage currency', async () => {
 });
 
 /** Restores original transaction values rather than displaying the converted storage amount. */
-test('editor restores saved original-currency amounts and legacy base amounts exactly', async () => {
-  const { createExpenseEditorDraft } = await loadEditorModel();
+test('editor restores saved original-currency amounts and legacy base amounts exactly', () => {
   const original = savedExpense({ originalAmountMinor: 701, originalCurrency: 'USD' });
   assert.deepEqual(createExpenseEditorDraft(original, 'MXN'), {
     amount: '7.01',
@@ -51,8 +52,7 @@ test('editor restores saved original-currency amounts and legacy base amounts ex
 });
 
 /** Detects each editable value without normalizing away unsaved text changes. */
-test('editor detects changes to every draft field and recognizes reverted edits', async () => {
-  const { createExpenseEditorDraft, hasExpenseDraftChanges } = await loadEditorModel();
+test('editor detects changes to every draft field and recognizes reverted edits', () => {
   const initial = createExpenseEditorDraft(savedExpense(), 'MXN');
   assert.equal(hasExpenseDraftChanges({ ...initial }, initial), false);
   const changes = {
@@ -69,8 +69,7 @@ test('editor detects changes to every draft field and recognizes reverted edits'
 });
 
 /** Keeps local currency entry usable without a network rate cache. */
-test('editor prepares an offline base-currency save with trimmed notes and exact cents', async () => {
-  const { createExpenseEditorDraft, buildExpenseInput } = await loadEditorModel();
+test('editor prepares an offline base-currency save with trimmed notes and exact cents', () => {
   const draft = {
     ...createExpenseEditorDraft(savedExpense(), 'MXN'),
     amount: '12,34',
@@ -89,8 +88,7 @@ test('editor prepares an offline base-currency save with trimmed notes and exact
 });
 
 /** Delegates conversion to domain rules and captures the supplied rate cache without mutating it. */
-test('editor prepares foreign-currency saves using the supplied cached rates', async () => {
-  const { createExpenseEditorDraft, buildExpenseInput } = await loadEditorModel();
+test('editor prepares foreign-currency saves using the supplied cached rates', () => {
   const rates = [
     { base: 'MXN' as const, quote: 'USD' as const, rate: 0.05, date: '2026-01-14' },
     { base: 'MXN' as const, quote: 'EUR' as const, rate: 0.04, date: '2026-01-14' },
@@ -111,8 +109,7 @@ test('editor prepares foreign-currency saves using the supplied cached rates', a
 });
 
 /** Retains the existing domain validation errors before any persistence request can run. */
-test('editor rejects invalid amounts, categories, dates, and oversized notes', async () => {
-  const { createExpenseEditorDraft, buildExpenseInput } = await loadEditorModel();
+test('editor rejects invalid amounts, categories, dates, and oversized notes', () => {
   const draft = createExpenseEditorDraft(savedExpense(), 'MXN');
   for (const amount of ['', '0', '-1', '1.001', '90071992547409.92']) {
     assert.throws(() => buildExpenseInput({ ...draft, amount }, 'MXN', null));
