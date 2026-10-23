@@ -1,35 +1,39 @@
-# Mocks para pruebas
+# Test Mocks
 
-Ejecuta todas las pruebas con `npm test`. No necesitan Expo Go ni paquetes npm instalados; requieren Node 24.3 o posterior.
+Run all tests with `npm test`. They do not need Expo Go or globally installed npm packages; Node 24.3 or later is required.
 
-`mocks/repository.ts` exporta `createMockRepository()`, un repositorio en memoria con la interfaz del repositorio de producción. Cada llamada crea datos y controles independientes. `fixtures/expenses.ts` contiene tres gastos ficticios de distintas fechas y categorías, que solo se cargan si la prueba los solicita.
+`mocks/repository.ts` exports `createMockRepository()`, an in-memory repository that implements the production repository contract. Each call creates independent data and controls. `fixtures/expenses.ts` contains three fictional expenses across dates and categories; they are loaded only when a test requests them.
 
 ```ts
 import assert from 'node:assert/strict';
 import { ExpenseStore } from '../src/application/expense-store.ts';
+import { createFrankfurterRateProvider } from '../src/infrastructure/frankfurter-rate-provider.ts';
 import { createMockRepository } from './mocks/repository.ts';
 import { sampleExpenses } from './fixtures/expenses.ts';
 
 const disk = createMockRepository({ expenses: sampleExpenses, currency: 'MXN' });
-const store = new ExpenseStore(disk.repo);
+const rateProvider = createFrankfurterRateProvider(async () => {
+  throw new Error('Offline');
+});
+const store = new ExpenseStore(disk.repo, rateProvider);
 await store.initialize();
 const input = { amountMinor: 1500, category: 'Other', date: '2026-10-21', note: '' } as const;
 
-// Fallo puntual: el siguiente guardado falla; los posteriores funcionan.
+// One-time failure: the next save fails, then later saves recover.
 disk.failNext('save', new Error('Disk full'));
 await assert.rejects(store.save(input), /Disk full/);
 
-// Fallo persistente y recuperación.
+// Persistent failure and recovery.
 disk.fail(true);
 disk.fail(false);
 
-// Controlar cuándo termina una operación.
+// Control when an operation completes.
 const resume = disk.pauseNext('save');
 const saving = store.save(input);
 resume();
 await saving;
 ```
 
-Los controles `failNext` y `pauseNext` aceptan `initialize`, `list`, `getCurrency`, `setCurrency`, `save`, `remove` y `loadDemoData`. La opción `now: () => '2026-10-21T12:00:00Z'` permite fijar la fecha de creación para resultados deterministas.
+The `failNext` and `pauseNext` controls accept `initialize`, `list`, `getCurrency`, `setCurrency`, `save`, `remove`, and `loadDemoData`. The `now: () => '2026-10-21T12:00:00Z'` option fixes creation times for deterministic results.
 
-Las pruebas verifican el comportamiento del store: recuperación, conservación de datos, guardados demorados y prevención de duplicados. Las pruebas de integración del repositorio siguen usando SQLite real, para comprobar las consultas, migraciones y persistencia.
+The tests verify store behavior: recovery, data preservation, delayed saves, and duplicate prevention. Repository integration tests continue to use real SQLite to verify queries, migrations, and persistence.
