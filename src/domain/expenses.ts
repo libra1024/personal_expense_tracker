@@ -1,6 +1,8 @@
 export const CATEGORIES = [
-  'Food & Drink', 'Groceries', 'Transport', 'Shopping', 'Bills',
-  'Health', 'Entertainment', 'Travel', 'Other',
+  'Food & Drink', 'Groceries', 'Transport', 'Housing', 'Bills', 'Insurance',
+  'Shopping', 'Health', 'Personal Care', 'Education', 'Childcare', 'Pets',
+  'Subscriptions', 'Entertainment', 'Travel', 'Gifts & Donations', 'Taxes & Fees',
+  'Business', 'Other',
 ] as const;
 export type Category = typeof CATEGORIES[number];
 export const CURRENCIES = ['MXN', 'USD', 'EUR'] as const;
