@@ -38,15 +38,6 @@ export function toBaseMinor(
   return rate ? convertMinor(minor, 1 / rate) : null;
 }
 
-export function displayHistoricalMinor(
-  baseMinor: number,
-  base: Currency,
-  target: Currency,
-  snapshot: readonly Rate[] | null,
-): number | null {
-  return displayMinor(baseMinor, base, target, snapshot);
-}
-
 export function historicalExpenseMinor(
   expense: Pick<
     Expense,
