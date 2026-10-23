@@ -4,18 +4,15 @@ import {
   type Currency,
   type Expense,
   type ExpenseInput,
-} from "../domain/expenses.ts";
-import { validateRates, type Rate } from "../domain/currency.ts";
-import { createDemoExpenses } from "../demo-data.ts";
+} from '../domain/expenses.ts';
+import { validateRates, type Rate } from '../domain/currency.ts';
+import { createDemoExpenses } from '../demo-data.ts';
 
 type Param = string | number | null;
 // Structural boundary implemented by Expo SQLite and exercised using real Node SQLite in tests.
 export interface Database {
   execAsync(sql: string): Promise<void>;
-  runAsync(
-    sql: string,
-    ...params: Param[]
-  ): Promise<{ lastInsertRowId: number; changes: number }>;
+  runAsync(sql: string, ...params: Param[]): Promise<{ lastInsertRowId: number; changes: number }>;
   getAllAsync<T>(sql: string, ...params: Param[]): Promise<T[]>;
   getFirstAsync<T>(sql: string, ...params: Param[]): Promise<T | null>;
 }
@@ -29,14 +26,10 @@ export function createRepository(
   return {
     /** Initializes the schema and applies each idempotent migration in order. */
     async initialize() {
-      const version = await db.getFirstAsync<{ user_version: number }>(
-        "PRAGMA user_version",
-      );
+      const version = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
       if ((version?.user_version ?? 0) > 4)
-        throw new Error(
-          "This database was created by a newer app. Update the app to open it.",
-        );
-      await db.execAsync("PRAGMA journal_mode = WAL;");
+        throw new Error('This database was created by a newer app. Update the app to open it.');
+      await db.execAsync('PRAGMA journal_mode = WAL;');
       if ((version?.user_version ?? 0) === 0)
         await db
           .execAsync(
@@ -64,7 +57,7 @@ export function createRepository(
           )
           .catch(async (error: unknown) => {
             try {
-              await db.execAsync("ROLLBACK;");
+              await db.execAsync('ROLLBACK;');
             } catch {
               /* Preserve the initialization error. */
             }
@@ -84,7 +77,7 @@ export function createRepository(
           )
           .catch(async (error: unknown) => {
             try {
-              await db.execAsync("ROLLBACK;");
+              await db.execAsync('ROLLBACK;');
             } catch {
               /* Preserve the initialization error. */
             }
@@ -103,7 +96,7 @@ export function createRepository(
           )
           .catch(async (error: unknown) => {
             try {
-              await db.execAsync("ROLLBACK;");
+              await db.execAsync('ROLLBACK;');
             } catch {
               /* Preserve the initialization error. */
             }
@@ -122,7 +115,7 @@ export function createRepository(
           )
           .catch(async (error: unknown) => {
             try {
-              await db.execAsync("ROLLBACK;");
+              await db.execAsync('ROLLBACK;');
             } catch {
               /* Preserve the initialization error. */
             }
@@ -131,13 +124,12 @@ export function createRepository(
       // One atomic, idempotent migration: never reinterpret amounts after display changes.
       await db.runAsync(`INSERT OR IGNORE INTO settings (key, value)
         SELECT 'baseCurrency', COALESCE((SELECT value FROM settings WHERE key = 'currency' AND value IN ('MXN', 'USD', 'EUR')), 'MXN')`);
-      if (options.demoData)
-        await seedDemoData(db, options.now?.() ?? new Date());
+      if (options.demoData) await seedDemoData(db, options.now?.() ?? new Date());
     },
     /** Lists only active expenses; logically deleted records remain in SQLite for audit history. */
     async list(): Promise<Expense[]> {
       return db.getAllAsync<Expense>(
-        "SELECT * FROM expenses WHERE deletedAt IS NULL ORDER BY date DESC, createdAt DESC, id DESC",
+        'SELECT * FROM expenses WHERE deletedAt IS NULL ORDER BY date DESC, createdAt DESC, id DESC',
       );
     },
     async loadDemoData(): Promise<Expense[]> {
@@ -149,7 +141,7 @@ export function createRepository(
       const timestamp = (options.now?.() ?? new Date()).toISOString();
       if (id !== undefined) {
         const result = await db.runAsync(
-          "UPDATE expenses SET amountMinor = ?, category = ?, date = ?, note = ?, originalAmountMinor = ?, originalCurrency = ?, rateSnapshot = ?, updatedAt = ? WHERE id = ? AND deletedAt IS NULL",
+          'UPDATE expenses SET amountMinor = ?, category = ?, date = ?, note = ?, originalAmountMinor = ?, originalCurrency = ?, rateSnapshot = ?, updatedAt = ? WHERE id = ? AND deletedAt IS NULL',
           item.amountMinor,
           item.category,
           item.date,
@@ -160,11 +152,11 @@ export function createRepository(
           timestamp,
           id,
         );
-        if (!result.changes) throw new Error("This expense no longer exists.");
+        if (!result.changes) throw new Error('This expense no longer exists.');
         return id;
       }
       const result = await db.runAsync(
-        "INSERT INTO expenses (amountMinor, category, date, note, originalAmountMinor, originalCurrency, rateSnapshot, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        'INSERT INTO expenses (amountMinor, category, date, note, originalAmountMinor, originalCurrency, rateSnapshot, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         item.amountMinor,
         item.category,
         item.date,
@@ -181,7 +173,7 @@ export function createRepository(
     async remove(id: number) {
       const timestamp = (options.now?.() ?? new Date()).toISOString();
       await db.runAsync(
-        "UPDATE expenses SET deletedAt = ?, updatedAt = ? WHERE id = ? AND deletedAt IS NULL",
+        'UPDATE expenses SET deletedAt = ?, updatedAt = ? WHERE id = ? AND deletedAt IS NULL',
         timestamp,
         timestamp,
         id,
@@ -192,7 +184,7 @@ export function createRepository(
         "SELECT value FROM settings WHERE key = 'baseCurrency'",
       );
       if (!CURRENCIES.includes(setting?.value as Currency))
-        throw new Error("Unable to read the original currency.");
+        throw new Error('Unable to read the original currency.');
       return setting!.value as Currency;
     },
     async getRateCache(): Promise<Rate[] | null> {
@@ -211,7 +203,7 @@ export function createRepository(
       const base = await this.getBaseCurrency();
       const validated = validateRates(rates, base);
       const snapshot = JSON.stringify(validated);
-      await db.execAsync("BEGIN IMMEDIATE;");
+      await db.execAsync('BEGIN IMMEDIATE;');
       try {
         await db.runAsync(
           "INSERT INTO settings (key, value) VALUES ('exchangeRates', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
@@ -220,14 +212,14 @@ export function createRepository(
         // Older records predate snapshots. Treat them as amounts in the fixed base
         // currency and freeze the first validated cache available after upgrade.
         await db.runAsync(
-          "UPDATE expenses SET originalAmountMinor = COALESCE(originalAmountMinor, amountMinor), originalCurrency = COALESCE(originalCurrency, ?), rateSnapshot = ? WHERE rateSnapshot IS NULL",
+          'UPDATE expenses SET originalAmountMinor = COALESCE(originalAmountMinor, amountMinor), originalCurrency = COALESCE(originalCurrency, ?), rateSnapshot = ? WHERE rateSnapshot IS NULL',
           base,
           snapshot,
         );
-        await db.execAsync("COMMIT;");
+        await db.execAsync('COMMIT;');
       } catch (error) {
         try {
-          await db.execAsync("ROLLBACK;");
+          await db.execAsync('ROLLBACK;');
         } catch {
           /* Preserve the write error. */
         }
@@ -238,13 +230,10 @@ export function createRepository(
       const setting = await db.getFirstAsync<{ value: string }>(
         "SELECT value FROM settings WHERE key = 'currency'",
       );
-      return CURRENCIES.includes(setting?.value as Currency)
-        ? (setting!.value as Currency)
-        : "MXN";
+      return CURRENCIES.includes(setting?.value as Currency) ? (setting!.value as Currency) : 'MXN';
     },
     async setCurrency(currency: Currency) {
-      if (!CURRENCIES.includes(currency))
-        throw new Error("Choose a supported currency.");
+      if (!CURRENCIES.includes(currency)) throw new Error('Choose a supported currency.');
       await db.runAsync(
         "INSERT INTO settings (key, value) VALUES ('currency', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value",
         currency,
@@ -254,28 +243,22 @@ export function createRepository(
 }
 
 /** Adds sample records only when no active expenses exist, retaining logically deleted records intact. */
-async function seedDemoData(
-  db: Database,
-  today: Date,
-  explicit = false,
-): Promise<Expense[]> {
-  await db.execAsync("BEGIN IMMEDIATE;");
+async function seedDemoData(db: Database, today: Date, explicit = false): Promise<Expense[]> {
+  await db.execAsync('BEGIN IMMEDIATE;');
   try {
     const marker = await db.getFirstAsync<{ value: string }>(
       "SELECT value FROM settings WHERE key = 'demo_seeded'",
     );
     if (explicit || !marker) {
       const count = await db.getFirstAsync<{ count: number }>(
-        "SELECT COUNT(*) AS count FROM expenses WHERE deletedAt IS NULL",
+        'SELECT COUNT(*) AS count FROM expenses WHERE deletedAt IS NULL',
       );
       if (explicit && count?.count !== 0)
-        throw new Error(
-          "Your expense list must be empty before loading sample expenses.",
-        );
+        throw new Error('Your expense list must be empty before loading sample expenses.');
       if (count?.count === 0) {
         for (const input of createDemoExpenses(today)) {
           await db.runAsync(
-            "INSERT INTO expenses (amountMinor, category, date, note, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)",
+            'INSERT INTO expenses (amountMinor, category, date, note, createdAt, updatedAt) VALUES (?, ?, ?, ?, ?, ?)',
             input.amountMinor,
             input.category,
             input.date,
@@ -291,13 +274,13 @@ async function seedDemoData(
       );
     }
     const expenses = await db.getAllAsync<Expense>(
-      "SELECT * FROM expenses WHERE deletedAt IS NULL ORDER BY date DESC, createdAt DESC, id DESC",
+      'SELECT * FROM expenses WHERE deletedAt IS NULL ORDER BY date DESC, createdAt DESC, id DESC',
     );
-    await db.execAsync("COMMIT;");
+    await db.execAsync('COMMIT;');
     return expenses;
   } catch (error) {
     try {
-      await db.execAsync("ROLLBACK;");
+      await db.execAsync('ROLLBACK;');
     } catch {
       /* Preserve the original storage error. */
     }

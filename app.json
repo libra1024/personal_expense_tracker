@@ -6,15 +6,8 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "light",
-    "platforms": [
-      "ios",
-      "android"
-    ],
-    "plugins": [
-      "expo-router",
-      "expo-sqlite",
-      "expo-font"
-    ],
+    "platforms": ["ios", "android"],
+    "plugins": ["expo-router", "expo-sqlite", "expo-font"],
     "ios": {
       "supportsTablet": true
     },

@@ -1,5 +1,5 @@
-import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { Ionicons } from '@expo/vector-icons';
+import { router } from 'expo-router';
 import {
   Pressable,
   ScrollView,
@@ -9,10 +9,10 @@ import {
   type ColorValue,
   type StyleProp,
   type ViewStyle,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import type { ComponentProps, ReactNode } from "react";
-import { historicalExpenseMinor } from "../domain/currency.ts";
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import type { ComponentProps, ReactNode } from 'react';
+import { historicalExpenseMinor } from '../domain/currency.ts';
 import {
   dateLabel,
   formatMoney,
@@ -21,87 +21,85 @@ import {
   type Category,
   type Currency,
   type Expense,
-} from "../domain/expenses.ts";
+} from '../domain/expenses.ts';
 
 export const colors = {
-  background: "#F5F7F5",
-  white: "#FFFFFF",
-  ink: "#17352F",
-  muted: "#70817B",
-  teal: "#167A63",
-  pale: "#E6F2EC",
-  line: "#E3EAE5",
-  danger: "#B33A3A",
+  background: '#F5F7F5',
+  white: '#FFFFFF',
+  ink: '#17352F',
+  muted: '#70817B',
+  teal: '#167A63',
+  pale: '#E6F2EC',
+  line: '#E3EAE5',
+  danger: '#B33A3A',
 };
-type IconName = ComponentProps<typeof Ionicons>["name"];
-export const categoryMeta: Record<
-  Category,
-  { icon: IconName; color: string; background: string }
-> = {
-  "Food & Drink": {
-    icon: "restaurant-outline",
-    color: "#BB743D",
-    background: "#FBEDDF",
-  },
-  Groceries: {
-    icon: "basket-outline",
-    color: "#438866",
-    background: "#EAF3E6",
-  },
-  Transport: { icon: "bus-outline", color: "#4D7BA5", background: "#E8F0F7" },
-  Housing: { icon: "home-outline", color: "#8B6B4A", background: "#F5EDE5" },
-  Bills: { icon: "receipt-outline", color: "#A88935", background: "#F6F1DD" },
-  Insurance: {
-    icon: "shield-checkmark-outline",
-    color: "#557B95",
-    background: "#E7F0F5",
-  },
-  Shopping: {
-    icon: "bag-handle-outline",
-    color: "#A56E99",
-    background: "#F6EAF3",
-  },
-  Health: { icon: "heart-outline", color: "#B7626F", background: "#F8E8EB" },
-  "Personal Care": {
-    icon: "sparkles-outline",
-    color: "#A47B55",
-    background: "#F8EFE4",
-  },
-  Education: {
-    icon: "school-outline",
-    color: "#6677A8",
-    background: "#EBEEF8",
-  },
-  Childcare: { icon: "happy-outline", color: "#C17A4F", background: "#FBEBDD" },
-  Pets: { icon: "paw-outline", color: "#7E7251", background: "#F2F0E5" },
-  Subscriptions: {
-    icon: "repeat-outline",
-    color: "#6B7D9B",
-    background: "#E9EEF5",
-  },
-  Entertainment: {
-    icon: "headset-outline",
-    color: "#8471B5",
-    background: "#EFEAF8",
-  },
-  Travel: { icon: "airplane-outline", color: "#479596", background: "#E2F2F1" },
-  "Gifts & Donations": {
-    icon: "gift-outline",
-    color: "#B4697B",
-    background: "#F8E9EE",
-  },
-  "Taxes & Fees": {
-    icon: "calculator-outline",
-    color: "#718064",
-    background: "#EDF1E9",
-  },
-  Business: {
-    icon: "briefcase-outline",
-    color: "#65798C",
-    background: "#E8EEF2",
-  },
-  Other: { icon: "grid-outline", color: "#74847C", background: "#EDF0ED" },
-};
+type IconName = ComponentProps<typeof Ionicons>['name'];
+export const categoryMeta: Record<Category, { icon: IconName; color: string; background: string }> =
+  {
+    'Food & Drink': {
+      icon: 'restaurant-outline',
+      color: '#BB743D',
+      background: '#FBEDDF',
+    },
+    Groceries: {
+      icon: 'basket-outline',
+      color: '#438866',
+      background: '#EAF3E6',
+    },
+    Transport: { icon: 'bus-outline', color: '#4D7BA5', background: '#E8F0F7' },
+    Housing: { icon: 'home-outline', color: '#8B6B4A', background: '#F5EDE5' },
+    Bills: { icon: 'receipt-outline', color: '#A88935', background: '#F6F1DD' },
+    Insurance: {
+      icon: 'shield-checkmark-outline',
+      color: '#557B95',
+      background: '#E7F0F5',
+    },
+    Shopping: {
+      icon: 'bag-handle-outline',
+      color: '#A56E99',
+      background: '#F6EAF3',
+    },
+    Health: { icon: 'heart-outline', color: '#B7626F', background: '#F8E8EB' },
+    'Personal Care': {
+      icon: 'sparkles-outline',
+      color: '#A47B55',
+      background: '#F8EFE4',
+    },
+    Education: {
+      icon: 'school-outline',
+      color: '#6677A8',
+      background: '#EBEEF8',
+    },
+    Childcare: { icon: 'happy-outline', color: '#C17A4F', background: '#FBEBDD' },
+    Pets: { icon: 'paw-outline', color: '#7E7251', background: '#F2F0E5' },
+    Subscriptions: {
+      icon: 'repeat-outline',
+      color: '#6B7D9B',
+      background: '#E9EEF5',
+    },
+    Entertainment: {
+      icon: 'headset-outline',
+      color: '#8471B5',
+      background: '#EFEAF8',
+    },
+    Travel: { icon: 'airplane-outline', color: '#479596', background: '#E2F2F1' },
+    'Gifts & Donations': {
+      icon: 'gift-outline',
+      color: '#B4697B',
+      background: '#F8E9EE',
+    },
+    'Taxes & Fees': {
+      icon: 'calculator-outline',
+      color: '#718064',
+      background: '#EDF1E9',
+    },
+    Business: {
+      icon: 'briefcase-outline',
+      color: '#65798C',
+      background: '#E8EEF2',
+    },
+    Other: { icon: 'grid-outline', color: '#74847C', background: '#EDF0ED' },
+  };
 export function Icon({
   name,
   size = 22,
@@ -113,21 +111,12 @@ export function Icon({
 }) {
   return <Ionicons name={name} size={size} color={color} />;
 }
-export function Screen({
-  children,
-  scroll = true,
-}: {
-  children: ReactNode;
-  scroll?: boolean;
-}) {
+export function Screen({ children, scroll = true }: { children: ReactNode; scroll?: boolean }) {
   const content = <View style={styles.content}>{children}</View>;
   return (
-    <SafeAreaView style={styles.screen} edges={["top", "left", "right"]}>
+    <SafeAreaView style={styles.screen} edges={['top', 'left', 'right']}>
       {scroll ? (
-        <ScrollView
-          contentContainerStyle={{ flexGrow: 1 }}
-          keyboardShouldPersistTaps="handled"
-        >
+        <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
           {content}
         </ScrollView>
       ) : (
@@ -158,13 +147,7 @@ export function Header({
     </View>
   );
 }
-export function Card({
-  children,
-  style,
-}: {
-  children: ReactNode;
-  style?: StyleProp<ViewStyle>;
-}) {
+export function Card({ children, style }: { children: ReactNode; style?: StyleProp<ViewStyle> }) {
   return <View style={[styles.card, style]}>{children}</View>;
 }
 export function Button({
@@ -191,7 +174,7 @@ export function Button({
       style={({ pressed }) => [
         styles.button,
         secondary && styles.secondary,
-        danger && { backgroundColor: "#FBEDED" },
+        danger && { backgroundColor: '#FBEDED' },
         (disabled || pressed) && { opacity: 0.55 },
       ]}
     >
@@ -199,9 +182,7 @@ export function Button({
         <Icon
           name={icon}
           size={20}
-          color={
-            danger ? colors.danger : secondary ? colors.teal : colors.white
-          }
+          color={danger ? colors.danger : secondary ? colors.teal : colors.white}
         />
       )}
       <Text
@@ -253,7 +234,7 @@ export function MonthPicker({
         name="chevron-back"
         label="Previous month"
         onPress={() => onChange(shiftMonth(value, -1))}
-        disabled={value === "1900-01"}
+        disabled={value === '1900-01'}
       />
       <View style={styles.row}>
         <Icon name="calendar-outline" size={17} color={colors.teal} />
@@ -265,7 +246,7 @@ export function MonthPicker({
         name="chevron-forward"
         label="Next month"
         onPress={() => onChange(shiftMonth(value, 1))}
-        disabled={value === "9999-12"}
+        disabled={value === '9999-12'}
       />
     </View>
   );
@@ -280,16 +261,14 @@ export function EmptyState({
   add?: boolean;
 }) {
   return (
-    <Card style={{ alignItems: "center", paddingVertical: 35, gap: 12 }}>
+    <Card style={{ alignItems: 'center', paddingVertical: 35, gap: 12 }}>
       <View style={styles.emptyIcon}>
         <Icon name="wallet-outline" size={30} color={colors.teal} />
       </View>
       <Text style={styles.sectionTitle}>{title}</Text>
-      <Text style={[styles.body, { textAlign: "center", maxWidth: 270 }]}>
-        {message}
-      </Text>
+      <Text style={[styles.body, { textAlign: 'center', maxWidth: 270 }]}>{message}</Text>
       {add && (
-        <Button icon="add" onPress={() => router.push("/expense")}>
+        <Button icon="add" onPress={() => router.push('/expense')}>
           Add your first expense
         </Button>
       )}
@@ -319,7 +298,7 @@ export function ExpenseRow({
       accessibilityLabel={`Edit ${expense.category}, ${amount}, ${dateLabel(expense.date)}`}
       onPress={() =>
         router.push({
-          pathname: "/expense",
+          pathname: '/expense',
           params: { id: String(expense.id) },
         })
       }
@@ -346,22 +325,22 @@ export function ExpenseRow({
 export const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.background },
   content: {
-    width: "100%",
+    width: '100%',
     maxWidth: 680,
-    alignSelf: "center",
+    alignSelf: 'center',
     padding: 22,
     gap: 24,
     paddingBottom: 34,
   },
   header: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
     paddingTop: 14,
   },
   eyebrow: {
     fontSize: 10,
-    fontWeight: "700",
+    fontWeight: '700',
     letterSpacing: 1.8,
     color: colors.teal,
     marginBottom: 13,
@@ -369,7 +348,7 @@ export const styles = StyleSheet.create({
   title: {
     color: colors.ink,
     fontSize: 32,
-    fontWeight: "700",
+    fontWeight: '700',
     letterSpacing: -1,
   },
   subtitle: { color: colors.muted, fontSize: 14, lineHeight: 21, marginTop: 7 },
@@ -383,16 +362,16 @@ export const styles = StyleSheet.create({
     padding: 20,
     gap: 16,
   },
-  row: { flexDirection: "row", alignItems: "center", gap: 8 },
+  row: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   between: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 12,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.ink,
     letterSpacing: -0.3,
   },
@@ -400,45 +379,45 @@ export const styles = StyleSheet.create({
     minHeight: 52,
     borderRadius: 14,
     backgroundColor: colors.teal,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 8,
     paddingHorizontal: 18,
     paddingVertical: 14,
   },
   secondary: { backgroundColor: colors.pale },
-  buttonText: { color: colors.white, fontWeight: "600", fontSize: 15 },
+  buttonText: { color: colors.white, fontWeight: '600', fontSize: 15 },
   iconButton: {
     minWidth: 44,
     minHeight: 44,
-    alignItems: "center",
-    justifyContent: "center",
+    alignItems: 'center',
+    justifyContent: 'center',
     borderRadius: 12,
   },
   monthPicker: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     backgroundColor: colors.white,
     borderRadius: 15,
     borderWidth: 1,
     borderColor: colors.line,
     padding: 4,
   },
-  monthLabel: { color: colors.ink, fontSize: 15, fontWeight: "600" },
+  monthLabel: { color: colors.ink, fontSize: 15, fontWeight: '600' },
   emptyIcon: {
     width: 64,
     height: 64,
     borderRadius: 22,
     backgroundColor: colors.pale,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
     marginBottom: 4,
   },
   expenseRow: {
-    flexDirection: "row",
-    alignItems: "center",
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 12,
     paddingVertical: 15,
   },
@@ -446,20 +425,20 @@ export const styles = StyleSheet.create({
     width: 43,
     height: 43,
     borderRadius: 14,
-    justifyContent: "center",
-    alignItems: "center",
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  rowTitle: { color: colors.ink, fontSize: 14, fontWeight: "600" },
+  rowTitle: { color: colors.ink, fontSize: 14, fontWeight: '600' },
   amount: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.ink,
-    maxWidth: "46%",
+    maxWidth: '46%',
   },
   error: { color: colors.danger, fontSize: 14, lineHeight: 21 },
   fieldLabel: {
     fontSize: 13,
-    fontWeight: "600",
+    fontWeight: '600',
     color: colors.ink,
     marginBottom: 9,
   },
@@ -480,7 +459,7 @@ export const styles = StyleSheet.create({
     borderColor: colors.line,
     backgroundColor: colors.white,
     paddingHorizontal: 14,
-    justifyContent: "center",
+    justifyContent: 'center',
   },
   chipSelected: { backgroundColor: colors.pale, borderColor: colors.teal },
 });

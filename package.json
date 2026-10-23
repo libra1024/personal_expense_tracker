@@ -10,7 +10,9 @@
     "ios": "expo start --ios",
     "test": "node --test --test-isolation=none tests/*.test.ts",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
@@ -35,6 +37,7 @@
     "@types/react": "~19.2.2",
     "eslint": "^9.25.0",
     "eslint-config-expo": "~57.0.2",
+    "prettier": "^3.9.10",
     "typescript": "~6.0.3"
   },
   "engines": {
