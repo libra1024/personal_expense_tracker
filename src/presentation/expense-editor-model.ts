@@ -4,17 +4,15 @@ import {
   validateDraft,
   type Category,
   type Currency,
+  type Draft,
   type Expense,
   type ExpenseInput,
 } from '../domain/expenses.ts';
 
 /** Holds editable input text separately from validated, integer-cent expense records. */
-export type ExpenseEditorDraft = {
-  amount: string;
+export type ExpenseEditorDraft = Draft & {
   transactionCurrency: Currency;
   category: Category | '';
-  date: string;
-  note: string;
 };
 
 /** Restores original transaction values or initializes a blank, local-date expense draft. */
